@@ -1,7 +1,64 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { UserOutlined, VideoCameraOutlined, UploadOutlined } from '@ant-design/icons-vue';
+// import { UserOutlined, VideoCameraOutlined, UploadOutlined } from '@ant-design/icons-vue';
 import { invoke } from "@tauri-apps/api/core";
+
+import { reactive, watch, h, ref } from 'vue';
+import {
+  DesktopOutlined,
+  AppstoreOutlined,
+  VideoCameraOutlined,
+  UploadOutlined,
+} from '@ant-design/icons-vue';
+const state = reactive({
+  collapsed: false,
+  selectedKeys: ['1'],
+  openKeys: ['sub1'],
+  preOpenKeys: ['sub1'],
+});
+const items = reactive([
+  {
+    key: '1',
+    icon: () => h(VideoCameraOutlined),
+    label: '首页',
+    title: '首页',
+  },
+  {
+    key: '2',
+    icon: () => h(DesktopOutlined),
+    label: '配置',
+    title: '配置',
+  },
+  {
+    key: '3',
+    icon: () => h(UploadOutlined),
+    label: '收藏',
+    title: '收藏',
+  },
+  {
+    key: '4',
+    icon: () => h(AppstoreOutlined),
+    label: '设置',
+    title: '设置',
+    children: [
+      {
+        key: '5',
+        label: '通用',
+        title: '通用',
+      },
+      {
+        key: '6',
+        label: '关于',
+        title: '关于',
+      },
+    ],
+  },
+]);
+watch(
+  () => state.openKeys,
+  (_val: any, oldVal: string[]) => {
+    state.preOpenKeys = oldVal;
+  },
+);
 
 const onCollapse = (collapsed: boolean, type: string) => {
   console.log(collapsed, type);
@@ -32,53 +89,43 @@ async function greet() {
       <div class="logo">
         <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
       </div>
-      <a-menu v-model:selectedKeys="selectedKeys" theme="light" mode="inline">
-        <a-menu-item key="1">
-          <user-outlined />
-          <span class="nav-text">nav 1</span>
-        </a-menu-item>
-        <a-menu-item key="2">
-          <video-camera-outlined />
-          <span class="nav-text">nav 2</span>
-        </a-menu-item>
-        <a-menu-item key="3">
-          <upload-outlined />
-          <span class="nav-text">nav 3</span>
-        </a-menu-item>
-        <a-menu-item key="4">
-          <user-outlined />
-          <span class="nav-text">nav 4</span>
-        </a-menu-item>
-      </a-menu>
+      <a-menu
+        v-model:openKeys="state.openKeys"
+        v-model:selectedKeys="state.selectedKeys"
+        mode="inline"
+        theme="light"
+        :inline-collapsed="state.collapsed"
+        :items="items"
+      ></a-menu>
     </a-layout-sider>
     <a-layout>
       <a-layout-header :style="{ background: '#fff', padding: 0 }" />
       <a-layout-content :style="{ margin: '5px' }">
-        <div :style="{ padding: '5px', background: '#fff', height: '100%' }">content</div>
+        <div class="content">
+
+        </div>
       </a-layout-content>
     </a-layout>
   </a-layout>
 </template>
 
 <style scoped>
-/* .logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-} */
 .logo {
   display: flex;
   align-items: center;
   height: 32px;
   margin: 16px;
+  filter: drop-shadow(0 0 2em #747bff);
 }
 
 .ant-layout {
   height: 100%;
 }
 
+.content {
+  padding: 5px;
+  height: 100%;
+}
 </style>
 
 <style>
