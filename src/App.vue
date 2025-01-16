@@ -7,6 +7,10 @@ import {
   VideoCameraOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue';
+import { useRouter } from 'vue-router'
+
+const router = useRouter();
+
 const state = reactive({
   collapsed: false,
   selectedKeys: ['1'],
@@ -19,18 +23,21 @@ const items = reactive([
     icon: () => h(VideoCameraOutlined),
     label: '首页',
     title: '首页',
+    route: 'Home',
   },
   {
     key: '2',
     icon: () => h(DesktopOutlined),
     label: '配置',
     title: '配置',
+    route: 'Config',
   },
   {
     key: '3',
     icon: () => h(UploadOutlined),
     label: '收藏',
     title: '收藏',
+    route: 'Favorite',
   },
   {
     key: '4',
@@ -42,6 +49,7 @@ const items = reactive([
         key: '5',
         label: '通用',
         title: '通用',
+        route: 'Setting',
       },
       {
         key: '6',
@@ -62,6 +70,17 @@ const onCollapse = (collapsed: boolean, type: string) => {
   console.log(collapsed, type);
 };
 
+const handleMenuClick = (item: any) => {
+  console.log(item);
+  const routeName = item.item.route;
+  if (!routeName) {
+    return;
+  }
+  router.push({
+    name: routeName,
+  })
+}
+
 const greetMsg = ref("");
 const name = ref("");
 
@@ -74,7 +93,6 @@ async function greet() {
 <template>
   <a-layout>
     <a-layout-sider
-      breakpoint=""
       collapsed-width="0"
       @collapse="onCollapse"
     >
@@ -88,13 +106,18 @@ async function greet() {
         theme="light"
         :inline-collapsed="state.collapsed"
         :items="items"
+        @click="handleMenuClick"
       ></a-menu>
     </a-layout-sider>
     <a-layout>
       <a-layout-header :style="{ background: '#fff', padding: 0 }" />
       <a-layout-content>
         <div class="content">
-
+          <router-view v-slot="{ Component }">
+            <transition name="slide-y" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </div>
       </a-layout-content>
     </a-layout>
@@ -102,6 +125,20 @@ async function greet() {
 </template>
 
 <style scoped>
+.slide-y-enter-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.slide-y-enter-from,
+.slide-y-leave-to {
+  transform: translateY(15px);
+  opacity: 0;
+}
+.slide-y-enter-to,
+.slide-y-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
 .logo {
   display: flex;
   align-items: center;
