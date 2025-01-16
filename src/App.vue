@@ -1,7 +1,5 @@
 <script setup lang="ts">
-// import { UserOutlined, VideoCameraOutlined, UploadOutlined } from '@ant-design/icons-vue';
 import { invoke } from "@tauri-apps/api/core";
-
 import { reactive, watch, h, ref } from 'vue';
 import {
   DesktopOutlined,
@@ -12,8 +10,8 @@ import {
 const state = reactive({
   collapsed: false,
   selectedKeys: ['1'],
-  openKeys: ['sub1'],
-  preOpenKeys: ['sub1'],
+  openKeys: [''],
+  preOpenKeys: [''],
 });
 const items = reactive([
   {
@@ -64,11 +62,6 @@ const onCollapse = (collapsed: boolean, type: string) => {
   console.log(collapsed, type);
 };
 
-const onBreakpoint = (broken: boolean) => {
-  console.log(broken);
-};
-
-const selectedKeys = ref<string[]>(['4']);
 const greetMsg = ref("");
 const name = ref("");
 
@@ -84,7 +77,6 @@ async function greet() {
       breakpoint=""
       collapsed-width="0"
       @collapse="onCollapse"
-      @breakpoint="onBreakpoint"
     >
       <div class="logo">
         <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
@@ -100,7 +92,7 @@ async function greet() {
     </a-layout-sider>
     <a-layout>
       <a-layout-header :style="{ background: '#fff', padding: 0 }" />
-      <a-layout-content :style="{ margin: '5px' }">
+      <a-layout-content>
         <div class="content">
 
         </div>
