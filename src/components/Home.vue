@@ -65,7 +65,11 @@ console.log(playlist.value);
     <div>
       <a-tabs v-model:activeKey="activeKey" type="editable-card" hideAdd>
         <a-tab-pane v-for="item in playlist" :key="item.groupName" :tab="item.groupName" :closable="false">
-          {{ item.channels }}
+          <a-flex wrap="wrap" gap="small">
+            <div class="channel-card" v-for="channel in item.channels" :key="channel" type="primary">
+              {{ channel.name }} - {{ channel.url }}
+            </div>
+          </a-flex>
         </a-tab-pane>
       </a-tabs>
     </div>
@@ -75,6 +79,14 @@ console.log(playlist.value);
 
 .ant-tabs-tab {
   border-radius: 32px;
+}
+
+.channel-card {
+  display: flex;
+  width: 200px;
+  height: 160px;
+  background: lightblue;
+  word-break: break-all;
 }
 
 </style>
