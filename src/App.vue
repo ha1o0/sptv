@@ -124,7 +124,7 @@ async function greet() {
   </a-layout>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .slide-y-enter-active {
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
@@ -149,6 +149,10 @@ async function greet() {
 
 .ant-layout {
   height: 100%;
+}
+
+.ant-layout-content {
+  background: white;
 }
 
 .content {
