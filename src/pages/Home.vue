@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
 import { ref } from "vue";
-import VideoPlayer from "./VideoPlayer.vue"; // 确保路径正确
+import VideoPlayer from "../components/VideoPlayer.vue"; // 确保路径正确
 
 const playlist = ref<M3UGroup[]>([]);
 const activeKey = ref("");
