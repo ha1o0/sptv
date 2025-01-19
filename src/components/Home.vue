@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
-import { ref } from 'vue';
+import { ref } from "vue";
+import VideoPlayer from "./VideoPlayer.vue"; // 确保路径正确
+
 const playlist = ref<M3UGroup[]>([]);
-
-const activeKey = ref('');
-
+const activeKey = ref("");
+const currentVideoSrc = ref("");
 // 示例 M3U 文件内容
 const m3uContent = `
 #EXTM3U x-tvg-url="https://epg.aptv.app/pp.xml.gz"
@@ -38,12 +39,12 @@ http://148.135.93.213:81/live.php?id=CCTV6
 http://148.135.93.213:81/live.php?id=五星体育
 #EXTINF:-1 tvg-id="凤凰资讯" tvg-name="凤凰资讯" http-user-agent="iPhone" group-title="卫视IPV4",凤凰资讯
 http://148.135.93.213:81/phenix.php?id=fhzx
-#EXTINF:-1 tvg-id="凤凰中文" tvg-name="凤凰中文" http-user-agent="iPhone" group-title="卫视IPV4",凤凰中文
-http://148.135.93.213:81/phenix.php?id=fhzw
+#EXTINF:-1 tvg-id="钱江都市" tvg-name="钱江都市" http-user-agent="iPhone" group-title="卫视IPV4",钱江都市
+http://ali-m-l.cztv.com/channels/lantian/channel002/1080p.m3u8
 #EXTINF:-1 tvg-id="凤凰香港" tvg-name="凤凰香港" http-user-agent="iPhone" group-title="卫视IPV4",凤凰香港
 http://148.135.93.213:81/phenix.php?id=fhhk
-#EXTINF:-1 tvg-id="北京卫视" tvg-name="北京卫视" group-title="卫视IPV4",北京卫视
-http://148.135.93.213:81/live.php?id=北京卫视
+#EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" group-title="卫视IPV4",浙江卫视
+http://ali-m-l.cztv.com/channels/lantian/channel001/1080p.m3u8
 `;
 
 const config = {
@@ -52,31 +53,53 @@ const config = {
   groupFields: ["group-title", "group"],
 };
 
+const play = (url: string) => {
+  currentVideoSrc.value = url;
+};
+
+const videoOptions = {
+  autoplay: true,
+  controls: true,
+  // 其他video.js配置选项
+};
+
 // 解析结果
 const result = M3UParser.parse(m3uContent, config);
 console.log(result);
 playlist.value = result;
 activeKey.value = result[0].groupName;
-console.log(playlist.value);
-
 </script>
 
 <template>
-    <div>
-      <a-tabs v-model:activeKey="activeKey" type="editable-card" hideAdd>
-        <a-tab-pane v-for="item in playlist" :key="item.groupName" :tab="item.groupName" :closable="false">
-          <a-flex wrap="wrap" gap="small">
-            <div class="channel-card" v-for="channel in item.channels" :key="channel" type="primary">
-              {{ channel.name }} - {{ channel.url }}
-            </div>
-          </a-flex>
-        </a-tab-pane>
-      </a-tabs>
+  <div>
+    <a-tabs v-model:activeKey="activeKey" type="editable-card" hideAdd>
+      <a-tab-pane
+        v-for="item in playlist"
+        :key="item.groupName"
+        :tab="item.groupName"
+        :closable="false"
+      >
+        <a-flex wrap="wrap" gap="small">
+          <div
+            class="channel-card"
+            v-for="channel in item.channels"
+            :key="channel"
+            type="primary"
+            @click="play(channel.url)"
+          >
+            {{ channel.name }} - {{ channel.url }}
+          </div>
+        </a-flex>
+      </a-tab-pane>
+    </a-tabs>
+    <!-- VideoPlayer 组件 -->
+    <div class="video-contaier">
+      <VideoPlayer :src="currentVideoSrc" :options="videoOptions" />
     </div>
+  </div>
 </template>
 
 <style lang="scss" scoped>
-
 .ant-tabs-tab {
   border-radius: 32px;
 }
@@ -87,6 +110,11 @@ console.log(playlist.value);
   height: 160px;
   background: lightblue;
   word-break: break-all;
+  cursor: pointer;
 }
 
+.video-container {
+    width: 80vw;
+    height: calc(80vw * 9 / 16);
+}
 </style>
