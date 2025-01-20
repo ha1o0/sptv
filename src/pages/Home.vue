@@ -94,7 +94,7 @@ activeKey.value = result[0].groupName;
     </a-tabs>
     <!-- VideoPlayer 组件 -->
     <div class="video-contaier">
-      <VideoPlayer :src="currentVideoSrc" :options="videoOptions" />
+      <VideoPlayer :src="currentVideoSrc" :playlist="playlist" :options="videoOptions" />
     </div>
   </div>
 </template>

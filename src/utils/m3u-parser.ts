@@ -2,6 +2,7 @@ export interface M3UChannel {
   url: string; // 频道链接
   name?: string; // 频道名称
   logo?: string; // 频道 logo
+  urls?: Array<string>; // 频道多个源
 }
 
 export interface M3UGroup {

@@ -28,6 +28,10 @@ const props = defineProps({
     type: String,
     required: true
   },
+  playlist: {
+    type: Array,
+    required: true
+  },
   // video.js配置选项
   options: {
     type: Object,
