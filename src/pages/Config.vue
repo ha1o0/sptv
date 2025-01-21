@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
 import { ref } from "vue";
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const playlist = ref<M3UGroup[]>([]);
 const activeKey = ref("");
 const currentVideoSrc = ref("");
@@ -57,6 +59,17 @@ const result = M3UParser.parse(m3uContent, config);
 console.log(result);
 playlist.value = result;
 activeKey.value = result[0].groupName;
+
+const play = (url: string) => {
+  currentVideoSrc.value = url;
+  router.push({
+    name: 'Player',
+    query: {
+      src: url,
+      playlist: JSON.stringify(playlist.value),
+    },
+  })
+};
 </script>
 
 <template>
@@ -74,6 +87,7 @@ activeKey.value = result[0].groupName;
             v-for="channel in item.channels"
             :key="channel"
             type="primary"
+            @click="play(channel.url)"
           >
             {{ channel.name }} - {{ channel.url }}
           </div>

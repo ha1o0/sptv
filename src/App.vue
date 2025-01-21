@@ -7,52 +7,54 @@ import {
   VideoCameraOutlined,
   UploadOutlined,
 } from '@ant-design/icons-vue';
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
+const route = useRoute();
 
 const state = reactive({
   collapsed: false,
-  selectedKeys: ['1'],
+  selectedKeys: [route.path],
   openKeys: [''],
   preOpenKeys: [''],
 });
+
 const items = reactive([
   {
-    key: '1',
-    icon: () => h(VideoCameraOutlined),
-    label: '首页',
-    title: '首页',
-    route: 'Home',
-  },
-  {
-    key: '2',
+    key: '/',
     icon: () => h(DesktopOutlined),
     label: '配置',
     title: '配置',
     route: 'Config',
   },
   {
-    key: '3',
+    key: '/player',
+    icon: () => h(VideoCameraOutlined),
+    label: '播放',
+    title: '播放',
+    route: 'Player',
+  },
+  {
+    key: '/favorite',
     icon: () => h(UploadOutlined),
     label: '收藏',
     title: '收藏',
     route: 'Favorite',
   },
   {
-    key: '4',
+    key: '/setting',
     icon: () => h(AppstoreOutlined),
     label: '设置',
     title: '设置',
     children: [
       {
-        key: '5',
+        key: '/setting/general',
         label: '通用',
         title: '通用',
         route: 'Setting',
       },
       {
-        key: '6',
+        key: '/setting/about',
         label: '关于',
         title: '关于',
       },
@@ -71,7 +73,6 @@ const onCollapse = (collapsed: boolean, type: string) => {
 };
 
 const handleMenuClick = (item: any) => {
-  console.log(item);
   const routeName = item.item.route;
   if (!routeName) {
     return;
@@ -80,6 +81,14 @@ const handleMenuClick = (item: any) => {
     name: routeName,
   })
 }
+
+// 监听路由变化同步 selectedKeys
+watch(
+  () => route.path,
+  (newPath: any) => {
+    state.selectedKeys = [newPath];
+  }
+);
 
 const greetMsg = ref("");
 const name = ref("");
@@ -157,7 +166,12 @@ async function greet() {
 
 .content {
   padding: 5px;
+  width: 100%;
   height: 100%;
+  > div {
+    width: 100%;
+    height: 100%;
+  }
 }
 </style>
 

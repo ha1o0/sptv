@@ -168,13 +168,15 @@ const handleChangeGroup = (groupName) => {
     height: 100%;
   }
   .video-playlist-container {
+    width: 20%;
     .top {
+      width: 100%;
       height: 40px;
       background: rgba($color: #000000, $alpha: 0.8);
       padding: 10px;
       color: #f0f0f0;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
     }
     .channel-list {
