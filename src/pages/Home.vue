@@ -93,7 +93,7 @@ activeKey.value = result[0].groupName;
       </a-tab-pane>
     </a-tabs>
     <!-- VideoPlayer 组件 -->
-    <div class="video-contaier">
+    <div class="video-container">
       <VideoPlayer :src="currentVideoSrc" :playlist="playlist" :options="videoOptions" />
     </div>
   </div>
@@ -107,7 +107,7 @@ activeKey.value = result[0].groupName;
 .channel-card {
   display: flex;
   width: 200px;
-  height: 160px;
+  height: 80px;
   background: lightblue;
   word-break: break-all;
   cursor: pointer;

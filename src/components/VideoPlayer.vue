@@ -14,6 +14,22 @@
           >HTML5 video</a>
       </p>
     </video>
+    <div class="video-playlist-container">
+      <div class="top">
+        <a-select
+          v-model:value="currentGroup"
+          placeholder="选择分组"
+          style="width: 200px"
+          :options="groupList"
+          @change="handleChangeGroup"
+        ></a-select>
+      </div>
+      <div class="channel-list">
+        <div v-for="(item, index) in currentChannels" :key="index">
+          {{ item.name }}
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -40,6 +56,9 @@ const props = defineProps({
 })
 
 const videoRef = ref(null)
+const groupList = ref([])
+const currentGroup = ref(null)
+const currentChannels = ref([])
 let player = null
 
 // 初始化视频播放器
@@ -95,6 +114,17 @@ const updateVideoSource = (newSrc) => {
 // 监听src属性变化
 watch(() => props.src, (newSrc) => {
   console.log('updated: ', newSrc)
+  groupList.value = props.playlist.map(item => {
+    return { value: item.groupName, label: item.groupName }
+  })
+  props.playlist.forEach(item => {
+    item.channels.forEach(channel => {
+      if (channel.url === newSrc) {
+        currentGroup.value = item.groupName
+        currentChannels.value = item.channels
+      }
+    })
+  })
   updateVideoSource(newSrc)
 })
 
@@ -109,11 +139,25 @@ onBeforeUnmount(() => {
     player.dispose()
   }
 })
+
+const handleChangeGroup = (groupName) => {
+  props.playlist.forEach(item => {
+    if (item.groupName === groupName) {
+        currentChannels.value = item.channels
+      }
+  })
+}
 </script>
 
 <style scoped>
 .video-container {
   width: 100%;
   height: 100%;
+  display: flex;
+
+  .video-js {
+    width: 80%;
+    height: 100%;
+  }
 }
 </style>
