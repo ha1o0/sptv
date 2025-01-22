@@ -2,6 +2,8 @@
 import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
 import { ref } from "vue";
 import { useRouter } from 'vue-router';
+import { Window } from "@tauri-apps/api/window"
+import { openPlayerWindow } from '@/windows/actions.ts'
 
 const router = useRouter();
 const playlist = ref<M3UGroup[]>([]);
@@ -60,15 +62,24 @@ console.log(result);
 playlist.value = result;
 activeKey.value = result[0].groupName;
 
-const play = (url: string) => {
-  currentVideoSrc.value = url;
-  router.push({
-    name: 'Player',
-    query: {
-      src: url,
-      playlist: JSON.stringify(playlist.value),
-    },
-  })
+const play = (src: string) => {
+  openPlayerWindow({ src , playlist: playlist.value })
+  // const appWindow = new Window('player-window');
+
+  // appWindow.once('tauri://created', function () {
+  //   console.log('success')
+  // });
+  // appWindow.once('tauri://error', function (e) {
+  //   console.log('error', e)
+  // });
+  // currentVideoSrc.value = src;
+  // router.push({
+  //   name: 'Player',
+  //   query: {
+  //     src: src,
+  //     playlist: JSON.stringify(playlist.value),
+  //   },
+  // })
 };
 </script>
 

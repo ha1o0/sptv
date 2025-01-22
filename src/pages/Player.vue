@@ -24,10 +24,10 @@ const videoOptions = {
 const query = router.currentRoute.value.query;
 console.log('hello: ', query);
 if (query.src) {
-  currentVideoSrc.value = query.src as string;
+  currentVideoSrc.value = decodeURIComponent(query.src) as string;
 }
 if (query.playlist) {
-  playlist.value = JSON.parse(query.playlist as string);
+  playlist.value = JSON.parse(decodeURIComponent(query.playlist) as string);
   activeKey.value = playlist.value[0].groupName;
 }
 </script>
