@@ -7,8 +7,13 @@ const routes = [
     children: [
       {
         path: "",
-        name: "Config",
-        component: () => import("./pages/Config.vue"),
+        name: "ConfigList",
+        component: () => import("./pages/Config/List.vue"),
+      },
+      {
+        path: "config/:id",
+        name: "ConfigDetail",
+        component: () => import("./pages/Config/Detail.vue"),
       },
       {
         path: "player",

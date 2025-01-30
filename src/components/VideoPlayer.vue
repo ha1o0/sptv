@@ -5,9 +5,7 @@
       <source src="" type="video/mp4" />
       <p class="vjs-no-js">
         如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
-        <a href="https://videojs.com/html5-video-support/" target="_blank"
-          >HTML5 video</a
-        >
+        <a href="https://videojs.com/html5-video-support/" target="_blank">HTML5 video</a>
       </p>
     </video>
     <div class="video-playlist-container">
@@ -78,7 +76,14 @@ const initializePlayer = () => {
     sources: [
       {
         src: props.src,
+        // type: "application/vnd.apple.mpegurl",
         type: "application/x-mpegURL", // m3u8格式
+        headers: {
+          "User-Agent": "Mozilla/5.0 (DirectPlayer)", // 简化 User-Agent
+          Referer: "", // 清空 Referer
+          "Accept-Language": "en", // 简化语言头
+          Cookie: "", // 清空 Cookie
+        },
       },
     ],
   };
@@ -100,7 +105,6 @@ const initializePlayer = () => {
   player.on("error", (error) => {
     console.error("Video player error:", error);
   });
-  
 };
 
 // 更新视频源

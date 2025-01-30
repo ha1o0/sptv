@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
+import { M3UGroup } from "@/utils/m3u-parser";
 import { ref } from "vue";
 import VideoPlayer from "../components/VideoPlayer.vue"; // 确保路径正确
-import { useRouter } from 'vue-router';
+import { useRouter } from "vue-router";
+import { useM3uStore } from "@/stores/m3u.ts";
 
+const m3uStore = useM3uStore();
 const router = useRouter();
 const playlist = ref<M3UGroup[]>([]);
 const activeKey = ref("");
@@ -22,14 +24,21 @@ const videoOptions = {
 // 解析结果
 
 const query = router.currentRoute.value.query;
-console.log('hello: ', query);
+console.log("hello: ", query);
 if (query.src) {
   currentVideoSrc.value = decodeURIComponent(query.src) as string;
 }
-if (query.playlist) {
-  playlist.value = JSON.parse(decodeURIComponent(query.playlist) as string);
+if (query.m3uSourceUrl) {
+  const m3uSourceUrl = decodeURIComponent(query.m3uSourceUrl) as string;
+  const source = m3uStore.getSourceByUrl(m3uSourceUrl);
+  console.log("query: ", m3uSourceUrl, source);
+  playlist.value = source;
   activeKey.value = playlist.value[0].groupName;
 }
+// if (query.playlist) {
+//   playlist.value = JSON.parse(decodeURIComponent(query.playlist) as string);
+//   activeKey.value = playlist.value[0].groupName;
+// }
 </script>
 
 <template>
@@ -55,7 +64,7 @@ if (query.playlist) {
 }
 
 .video-container {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 </style>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { reactive, watch, h, ref } from 'vue';
+import { reactive, watch, h, ref } from "vue";
 import {
   DesktopOutlined,
   AppstoreOutlined,
   VideoCameraOutlined,
   UploadOutlined,
-} from '@ant-design/icons-vue';
+} from "@ant-design/icons-vue";
 import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
@@ -15,48 +15,48 @@ const route = useRoute();
 const state = reactive({
   collapsed: false,
   selectedKeys: [route.path],
-  openKeys: [''],
-  preOpenKeys: [''],
+  openKeys: [""],
+  preOpenKeys: [""],
 });
 
 const items = reactive([
   {
-    key: '/',
+    key: "/",
     icon: () => h(DesktopOutlined),
-    label: '配置',
-    title: '配置',
-    route: 'Config',
+    label: "配置",
+    title: "配置",
+    route: "ConfigList",
   },
+  // {
+  //   key: '/player',
+  //   icon: () => h(VideoCameraOutlined),
+  //   label: '播放',
+  //   title: '播放',
+  //   route: 'Player',
+  // },
   {
-    key: '/player',
-    icon: () => h(VideoCameraOutlined),
-    label: '播放',
-    title: '播放',
-    route: 'Player',
-  },
-  {
-    key: '/favorite',
+    key: "/favorite",
     icon: () => h(UploadOutlined),
-    label: '收藏',
-    title: '收藏',
-    route: 'Favorite',
+    label: "收藏",
+    title: "收藏",
+    route: "Favorite",
   },
   {
-    key: '/setting',
+    key: "/setting",
     icon: () => h(AppstoreOutlined),
-    label: '设置',
-    title: '设置',
+    label: "设置",
+    title: "设置",
     children: [
       {
-        key: '/setting/general',
-        label: '通用',
-        title: '通用',
-        route: 'Setting',
+        key: "/setting/general",
+        label: "通用",
+        title: "通用",
+        route: "Setting",
       },
       {
-        key: '/setting/about',
-        label: '关于',
-        title: '关于',
+        key: "/setting/about",
+        label: "关于",
+        title: "关于",
       },
     ],
   },
@@ -65,7 +65,7 @@ watch(
   () => state.openKeys,
   (_val: any, oldVal: string[]) => {
     state.preOpenKeys = oldVal;
-  },
+  }
 );
 
 const onCollapse = (collapsed: boolean, type: string) => {
@@ -79,8 +79,8 @@ const handleMenuClick = (item: any) => {
   }
   router.push({
     name: routeName,
-  })
-}
+  });
+};
 
 // 监听路由变化同步 selectedKeys
 watch(
@@ -101,10 +101,7 @@ async function greet() {
 
 <template>
   <a-layout>
-    <a-layout-sider
-      collapsed-width="0"
-      @collapse="onCollapse"
-    >
+    <a-layout-sider collapsed-width="0" @collapse="onCollapse">
       <div class="logo">
         <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
       </div>
@@ -165,7 +162,7 @@ async function greet() {
 }
 
 .content {
-  padding: 5px;
+  padding: 8px;
   width: 100%;
   height: 100%;
   > div {
@@ -178,6 +175,7 @@ async function greet() {
 <style>
 #app {
   height: 100vh;
+  overflow-y: hidden;
 }
 
 .ant-layout-sider-children {
