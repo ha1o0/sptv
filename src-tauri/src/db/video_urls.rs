@@ -65,6 +65,17 @@ pub async fn add_video_urls(
         .await?;
     }
 
+    sqlx::query(
+        r#"
+        UPDATE video_sources
+        SET updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        "#,
+    )
+    .bind(source_id)
+    .execute(&mut *transaction)
+    .await?;
+
     // 提交事务
     transaction.commit().await?;
 

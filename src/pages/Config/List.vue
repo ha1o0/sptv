@@ -13,6 +13,7 @@ import Breadcrumb from "@/components/Breadcrumb.vue";
 import { convertTimestampsDeep } from "@/utils/common.ts";
 import { Form } from "ant-design-vue";
 import { M3UParser } from "@/utils/m3u-parser";
+import { message } from "ant-design-vue";
 
 // 获取路由对象
 const router = useRouter();
@@ -46,29 +47,7 @@ const columns = [
 ];
 
 // 表格数据
-const data = ref([
-  // {
-  //   key: "1",
-  //   name: "John Brown",
-  //   url: "https://vjs.zencdn.net/v/oceans.mp4",
-  //   created_at: "2021-06-01",
-  //   updated_at: "2022-06-01",
-  // },
-  // {
-  //   key: "2",
-  //   name: "Jim Green",
-  //   url: "https://vjs.zencdn.net/v/oceans.mp4",
-  //   created_at: "2021-06-01",
-  //   updated_at: "2023-06-01",
-  // },
-  // {
-  //   key: "3",
-  //   name: "Joe Black",
-  //   url: "https://vjs.zencdn.net/v/oceans.mp4",
-  //   created_at: "2021-06-01",
-  //   updated_at: "2024-06-01",
-  // },
-]);
+const data = ref([]);
 
 // Modal 弹框状态
 const visible = ref(false);
@@ -78,6 +57,8 @@ const isUpdate = ref(false);
 const showModal = () => {
   visible.value = true;
 };
+
+const messageDuration = 2.5;
 
 interface FormState {
   id: number;
@@ -99,6 +80,8 @@ const onFinish = async () => {
   } else {
     await addSource();
   }
+  message.success("操作成功", messageDuration);
+  getSources();
 };
 
 const onFinishFailed = (errorInfo: any) => {
@@ -128,6 +111,7 @@ async function getSources() {
     source.key = source.id.toString();
   });
   data.value = convertTimestampsDeep(sources);
+  visible.value = false;
 }
 
 const toAddConfig = () => {
@@ -154,8 +138,20 @@ const toConfigDetail = (key: string, name: string) => {
   router.push({ name: "ConfigDetail", params: { id: key }, query: { configName: name } });
 };
 
+const toUpdateVideoUrls = (updatedFormState: FormState) => {
+  try {
+    message
+      .loading("正在更新频道列表")
+      .then(() => updateVideoUrls(updatedFormState))
+      .then(() => getSources())
+      .then(() => message.success("更新频道列表完成", messageDuration));
+  } catch (error) {
+    message.error("更新频道列表失败, 请重试", messageDuration);
+  }
+};
+
 // 更新配置中的视频地址
-const toUpdateVideoUrls = async (updatedFormState: FormState) => {
+const updateVideoUrls = async (updatedFormState: FormState) => {
   console.log("toUpdateVideoUrls: ", updatedFormState);
   const { id, url } = updatedFormState;
   const m3uContent = await fetchM3U(url);
@@ -171,7 +167,7 @@ const toUpdateVideoUrls = async (updatedFormState: FormState) => {
   const result = M3UParser.parse(m3uContent, config);
   const videoUrls = M3UParser.flattenChannels(result, +id);
   console.log(videoUrls);
-  addVideoUrls(+id, videoUrls);
+  await addVideoUrls(+id, videoUrls);
 };
 
 // 更新配置
@@ -184,9 +180,10 @@ const toUpdateConfig = (updatedFormState: FormState) => {
 };
 
 // 删除配置
-const toDeleteConfig = (key: string) => {
-  deleteSource(+key);
-  getSources();
+const toDeleteConfig = async (key: string) => {
+  await deleteSource(+key);
+  message.success("删除成功", messageDuration);
+  await getSources();
 };
 
 getSources();
@@ -219,9 +216,14 @@ getSources();
               <EyeTwoTone />
             </a>
             <a-divider type="vertical" />
-            <a alt="更新频道" @click="toUpdateVideoUrls(record)"
-              ><InteractionTwoTone
-            /></a>
+            <a-popconfirm
+              title="确定更新该配置频道列表吗？"
+              ok-text="是"
+              cancel-text="否"
+              @confirm="toUpdateVideoUrls(record)"
+            >
+              <a alt="更新频道"><InteractionTwoTone /></a>
+            </a-popconfirm>
             <a-divider type="vertical" />
             <a alt="编辑" @click="toUpdateConfig(record)"><EditTwoTone /></a>
             <a-divider type="vertical" />

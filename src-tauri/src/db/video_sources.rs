@@ -92,7 +92,6 @@ pub async fn get_video_sources(pool: &SqlitePool) -> Result<Vec<VideoSource>, sq
     )
     .fetch_all(pool)
     .await?;
-
     Ok(sources)
 }
 
