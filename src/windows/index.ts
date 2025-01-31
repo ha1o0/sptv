@@ -29,7 +29,7 @@ class Windows {
     }
 
     // 创建新窗口
-    async createWin(options) {
+    async createWin(options: any) {
         console.log('-=-=-=-=-=开始创建窗口')
 
         const args = Object.assign({}, windowConfig, options)
@@ -66,7 +66,7 @@ class Windows {
     }
 
     // 获取窗口
-    async getWin(label) {
+    async getWin(label: any) {
         return await WebviewWindow.getByLabel(label)
     }
 
@@ -87,7 +87,7 @@ class Windows {
         })
 
         // 显示窗体
-        await listen('win-show', async(event) => {
+        await listen('win-show', async(_event) => {
             if(appWindow.label.indexOf('main') == -1) return
             await appWindow.show()
             await appWindow.unminimize()
@@ -95,13 +95,13 @@ class Windows {
         })
 
         // 隐藏窗体
-        await listen('win-hide', async(event) => {
+        await listen('win-hide', async(_event) => {
             if(appWindow.label.indexOf('main') == -1) return
             await appWindow.hide()
         })
 
         // 关闭窗体
-        await listen('win-close', async(event) => {
+        await listen('win-close', async(_event) => {
             await appWindow.close()
         })
 

@@ -25,7 +25,6 @@ export const useM3uStore = defineStore('m3u', {
     },
     // 根据 URL 获取源内容
     getSourceByUrl(state) {
-      console.log('state.sources: ', state)
       return (url: string): M3UGroup[] => {
         const key = hashUrl(url);
         console.log('key: ', key)

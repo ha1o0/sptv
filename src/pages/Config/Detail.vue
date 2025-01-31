@@ -48,7 +48,7 @@ const copyUrl = (url: string) => {
 </script>
 
 <template>
-  <div>
+  <div class="page-container">
     <Breadcrumb :items="breadcrumbItems" />
     <a-tabs class="tabs" v-model:activeKey="activeKey" type="editable-card" hideAdd>
       <a-tab-pane
@@ -57,7 +57,7 @@ const copyUrl = (url: string) => {
         :tab="item.groupName"
         :closable="false"
       >
-        <a-flex wrap="wrap" gap="small">
+        <a-flex wrap="wrap" gap="small" class="tab-content">
           <div
             class="channel-card"
             v-for="channel in item.channels"
@@ -79,6 +79,23 @@ const copyUrl = (url: string) => {
 </template>
 
 <style lang="scss" scoped>
+.page-container {
+  height: 100vh; /* 设置页面容器高度为视口高度 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 防止内容溢出 */
+}
+
+.tabs {
+  flex: 1; /* 让 tabs 占据剩余空间 */
+}
+
+.tab-content {
+  max-height: calc(100vh - 200px); /* 设置内容区域的最大高度 */
+  overflow-y: auto; /* 允许内容区域滚动 */
+  padding: 16px;
+}
+
 .ant-tabs-tab {
   border-radius: 32px;
 }
