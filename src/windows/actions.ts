@@ -8,13 +8,12 @@ import { emit } from '@tauri-apps/api/event'
   await emit('win-create', args)
 }
 
-export async function openPlayerWindow(options: { src: any; m3uSourceUrl: string }) {
-  const { src, m3uSourceUrl } = options
-  console.log(src, m3uSourceUrl)
-  if (!src || !m3uSourceUrl) {
+export async function openPlayerWindow(options: { src: any; sourceId: number }) {
+  const { src, sourceId } = options
+  if (!src || sourceId === undefined) {
     return
   }
-  const url = `/window/player?src=${src}&m3uSourceUrl=${m3uSourceUrl}`
+  const url = `/window/player?src=${encodeURIComponent(src)}&sourceId=${sourceId}`
   await createWin({
       label: 'player',
       title: '播放器',

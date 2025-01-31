@@ -42,8 +42,8 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         CREATE TABLE IF NOT EXISTS video_urls (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             source_id INTEGER NOT NULL,
-            video_url TEXT NOT NULL,
-            name TEXT NOT NULL,
+            url TEXT NOT NULL,
+            name TEXT,
             logo TEXT,
             group_name TEXT default 'default',
             is_deleted INTEGER DEFAULT 0,

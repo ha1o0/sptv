@@ -98,7 +98,7 @@ const initializePlayer = () => {
 
   // 监听播放器事件
   player.on("ready", () => {
-    console.log("Player is ready");
+    console.log("Player is ready", props.playlist);
     updateVideoSource(props.src);
   });
 
@@ -112,10 +112,12 @@ const updateVideoSource = (newSrc) => {
   if (!player) {
     initializePlayer();
   } else {
+    console.log("update src: ", newSrc);
     currentSrc.value = newSrc;
     groupList.value = props.playlist.map((item) => {
       return { value: item.groupName, label: item.groupName };
     });
+    console.log("groupList.value: ", groupList.value);
     props.playlist.forEach((item) => {
       item.channels.forEach((channel) => {
         if (channel.url === newSrc) {
@@ -185,6 +187,7 @@ const handleChangeGroup = (groupName) => {
     }
     .channel-list {
       height: calc(100% - 40px);
+      overflow-y: scroll;
       color: #f0f0f0;
       background: rgba($color: #000000, $alpha: 0.8);
       .channel-item {

@@ -117,6 +117,10 @@ async function updateSource() {
   await invoke("update_video_source_command", formState);
 }
 
+async function addVideoUrls(sourceId: any, videoUrls: any) {
+  await invoke("add_video_urls_command", { sourceId, videoUrls });
+}
+
 async function getSources() {
   const sources: any = await invoke("get_video_sources_command");
   console.log("sources: ", sources);
@@ -145,17 +149,17 @@ const fetchM3U = async (url: string) => {
 };
 
 // 跳转到配置详情页
-const toConfigDetail = (key: string) => {
+const toConfigDetail = (key: string, name: string) => {
   console.log("toConfigDetail: ", key);
-  router.push({ name: "ConfigDetail", params: { id: key } });
+  router.push({ name: "ConfigDetail", params: { id: key }, query: { configName: name } });
 };
 
 // 更新配置中的视频地址
 const toUpdateVideoUrls = async (updatedFormState: FormState) => {
   console.log("toUpdateVideoUrls: ", updatedFormState);
-  const { url } = updatedFormState;
+  const { id, url } = updatedFormState;
   const m3uContent = await fetchM3U(url);
-  console.log("content: ", m3uContent);
+  // console.log("content: ", m3uContent);
   if (!m3uContent) return;
   const config = {
     nameFields: ["tvg-name", "tv-name", "name"],
@@ -165,7 +169,9 @@ const toUpdateVideoUrls = async (updatedFormState: FormState) => {
 
   // 解析结果
   const result = M3UParser.parse(m3uContent, config);
-  console.log(result);
+  const videoUrls = M3UParser.flattenChannels(result, +id);
+  console.log(videoUrls);
+  addVideoUrls(+id, videoUrls);
 };
 
 // 更新配置
@@ -179,7 +185,6 @@ const toUpdateConfig = (updatedFormState: FormState) => {
 
 // 删除配置
 const toDeleteConfig = (key: string) => {
-  console.log("toDeleteConfig: ", key);
   deleteSource(+key);
   getSources();
 };
@@ -210,7 +215,7 @@ getSources();
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'action'">
           <span>
-            <a alt="查看频道" @click="toConfigDetail(record.key)">
+            <a alt="查看频道" @click="toConfigDetail(record.key, record.name)">
               <EyeTwoTone />
             </a>
             <a-divider type="vertical" />

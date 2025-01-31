@@ -29,7 +29,10 @@ export class M3UParser {
    * @param config 配置解析的字段映射，默认为 DEFAULT_CONFIG
    * @returns 按分组整理的频道列表，格式为 [{ groupName: '分组名', channels: [...] }]
    */
-  static parse(m3uContent: string, config: ParseConfig = DEFAULT_CONFIG): M3UGroup[] {
+  static parse(
+    m3uContent: string,
+    config: ParseConfig = DEFAULT_CONFIG
+  ): M3UGroup[] {
     const lines = m3uContent.split("\n").map((line) => line.trim());
     const groups: Record<string, M3UChannel[]> = {};
     let currentAttributes: Record<string, string> = {};
@@ -43,7 +46,11 @@ export class M3UParser {
         const url = line;
         const name = this.getFirstMatch(currentAttributes, config.nameFields);
         const logo = this.getFirstMatch(currentAttributes, config.logoFields);
-        const group = this.getFirstMatch(currentAttributes, config.groupFields, "默认分组");
+        const group = this.getFirstMatch(
+          currentAttributes,
+          config.groupFields,
+          "默认分组"
+        );
 
         const channel: M3UChannel = { url, name, logo };
 
@@ -65,13 +72,53 @@ export class M3UParser {
     }));
   }
 
+  static flattenChannels(data: any[], sourceId: number): any[] {
+    const result: any[] = [];
+
+    data.forEach((group) => {
+      const groupName = group.groupName;
+      group.channels.forEach((channel: any) => {
+        result.push({
+          ...channel,
+          group_name: groupName,
+          source_id: sourceId,
+        });
+      });
+    });
+
+    return result;
+  }
+
+  static formatChannels(channels: any[]): any[] {
+    const groups: Record<string, M3UChannel[]> = {};
+    channels.forEach((channel) => {
+      channel.groupName = channel.group_name;
+      delete channel.group_name;
+      const group = channel.groupName;
+      // 将频道添加到分组中
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group].push(channel);
+    });
+
+    // 转换为目标格式
+    return Object.entries(groups).map(([groupName, channels]) => ({
+      groupName,
+      channels,
+    }));
+  }
+
   /**
    * 提取 #EXTINF 属性字段
    * @param line #EXTINF 行
    * @param config 配置解析的字段映射
    * @returns 属性字段的键值对
    */
-  private static extractAttributes(line: string, config: ParseConfig): Record<string, string> {
+  private static extractAttributes(
+    line: string,
+    config: ParseConfig
+  ): Record<string, string> {
     const attributes: Record<string, string> = {};
     const regex = /(\w[\w-]*)="([^"]*)"/g;
     let match;
@@ -88,7 +135,11 @@ export class M3UParser {
    * @param defaultValue 如果未匹配到，返回的默认值
    * @returns 匹配到的值或默认值
    */
-  private static getFirstMatch(attributes: Record<string, string>, fields: string[], defaultValue: string = ""): string {
+  private static getFirstMatch(
+    attributes: Record<string, string>,
+    fields: string[],
+    defaultValue: string = ""
+  ): string {
     for (const field of fields) {
       if (attributes[field]) {
         return attributes[field];
