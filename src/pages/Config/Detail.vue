@@ -118,6 +118,12 @@ const copyUrl = (url: string) => {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
 
+  .channel-logo {
+    > img {
+      width: 50px;
+    }
+  }
+
   .channel-name {
     font-size: 16px;
     font-weight: 500;
