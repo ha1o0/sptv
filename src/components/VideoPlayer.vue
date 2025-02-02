@@ -1,14 +1,29 @@
-<!-- VideoPlayer.vue -->
 <template>
   <div class="video-container" v-show="currentSrc">
-    <video id="sptv" class="video-js" preload="auto" poster="">
-      <source src="" type="video/mp4" />
-      <p class="vjs-no-js">
-        如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
-        <a href="https://videojs.com/html5-video-support/" target="_blank">HTML5 video</a>
-      </p>
-    </video>
-    <div class="video-playlist-container">
+    <div class="video-js-box" :style="{ width: videoJsBoxWidth }">
+      <div class="video-navbar">
+        <!-- 左边显示当前播放的节目信息 -->
+        <div class="navbar-left">{{ currentGroup }} - {{ currentChannelName }}</div>
+        <!-- 右边添加一个按钮来控制播放列表的展开和收起 -->
+        <div class="navbar-right">
+          <button @click="togglePlaylist">
+            <AlignRightOutlined />
+          </button>
+        </div>
+      </div>
+      <video id="sptv" class="video-js" preload="auto" poster="">
+        <source src="" type="video/mp4" />
+        <p class="vjs-no-js">
+          如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
+          <a href="https://videojs.com/html5-video-support/" target="_blank"
+            >HTML5 video</a
+          >
+        </p>
+      </video>
+    </div>
+
+    <!-- 右侧播放列表 -->
+    <div class="video-playlist-container" :style="{ width: playlistWidth }">
       <div class="top">
         <a-select
           v-model:value="currentGroup"
@@ -34,7 +49,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
+import { AlignRightOutlined } from "@ant-design/icons-vue";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 
@@ -60,7 +76,21 @@ const groupList = ref([]);
 const currentGroup = ref(null);
 const currentChannels = ref([]);
 const currentSrc = ref(props.src);
+const currentChannelName = ref(""); // 当前播放的节目名称
+const isPlaylistVisible = ref(true); // 控制播放列表的展开和收起
+const playlistWidth = ref("230px"); // 播放列表的宽度
 let player = null;
+
+// 计算 video-js-box 的宽度
+const videoJsBoxWidth = computed(() => {
+  return isPlaylistVisible.value ? "calc(100% - 230px)" : "100%";
+});
+
+// 切换播放列表的展开和收起
+const togglePlaylist = () => {
+  isPlaylistVisible.value = !isPlaylistVisible.value;
+  playlistWidth.value = isPlaylistVisible.value ? "230px" : "0";
+};
 
 // 初始化视频播放器
 const initializePlayer = () => {
@@ -76,8 +106,6 @@ const initializePlayer = () => {
     sources: [
       {
         src: proxyUrl(props.src),
-        // type: "application/vnd.apple.mpegurl",
-        // type: "application/x-mpegURL", // m3u8格式
         headers: {
           "User-Agent": "Mozilla/5.0 (DirectPlayer)", // 简化 User-Agent
           Referer: "", // 清空 Referer
@@ -118,7 +146,6 @@ const updateVideoSource = (newSrc) => {
     updatePlaylist(newSrc);
     player.src({
       src: proxyUrl(newSrc),
-      // type: "application/x-mpegURL",
     });
     player.load();
   }
@@ -135,6 +162,7 @@ const updatePlaylist = (newSrc) => {
       if (channel.url === newSrc) {
         currentGroup.value = item.groupName;
         currentChannels.value = item.channels;
+        currentChannelName.value = channel.name; // 更新当前播放的节目名称
       }
     });
   });
@@ -179,15 +207,50 @@ const handleChangeGroup = (groupName) => {
   width: 100%;
   height: 100%;
   display: flex;
+  .video-js-box {
+    position: relative;
+    height: 100%;
+    padding: 0;
+    transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
+  }
+  .video-navbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    padding: 5px 16px;
+    z-index: 10;
+    background: rgba($color: black, $alpha: 0.8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #f0f0f0;
+    .navbar-left {
+      font-size: 14px;
+    }
+    .navbar-right {
+      button {
+        background: transparent;
+        border: none;
+        color: #f0f0f0;
+        cursor: pointer;
+        &:hover {
+          color: orangered;
+        }
+      }
+    }
+  }
   .video-js {
-    width: calc(100% - 230px);
+    width: 100%;
     height: 100%;
     padding: 0;
   }
   .video-playlist-container {
-    width: 230px;
+    width: v-bind(playlistWidth); /* 动态绑定宽度 */
     height: 100%; /* 设置播放列表高度为视口高度 */
     overflow-y: auto; /* 允许播放列表内部滚动 */
+    transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
     .top {
       width: 100%;
       height: 40px;
