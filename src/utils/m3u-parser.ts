@@ -117,7 +117,7 @@ export class M3UParser {
    */
   private static extractAttributes(
     line: string,
-    config: ParseConfig
+    _config: ParseConfig
   ): Record<string, string> {
     const attributes: Record<string, string> = {};
     const regex = /(\w[\w-]*)="([^"]*)"/g;

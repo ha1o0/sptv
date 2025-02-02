@@ -128,7 +128,7 @@ const fetchM3U = async (url: string) => {
     const m3uContent = await response.text();
     return m3uContent;
   } catch (error) {
-    console.error("获取m3u内容失败:", error);
+    message.error("获取m3u内容失败", messageDuration);
   }
 };
 

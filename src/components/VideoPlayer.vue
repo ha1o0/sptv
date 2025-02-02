@@ -75,9 +75,9 @@ const initializePlayer = () => {
     preload: "auto",
     sources: [
       {
-        src: props.src,
+        src: proxyUrl(props.src),
         // type: "application/vnd.apple.mpegurl",
-        type: "application/x-mpegURL", // m3u8格式
+        // type: "application/x-mpegURL", // m3u8格式
         headers: {
           "User-Agent": "Mozilla/5.0 (DirectPlayer)", // 简化 User-Agent
           Referer: "", // 清空 Referer
@@ -127,11 +127,15 @@ const updateVideoSource = (newSrc) => {
       });
     });
     player.src({
-      src: newSrc,
-      type: "application/x-mpegURL",
+      src: proxyUrl(newSrc),
+      // type: "application/x-mpegURL",
     });
     player.load();
   }
+};
+
+const proxyUrl = (url) => {
+  return url;
 };
 
 // 监听src属性变化
@@ -187,7 +191,6 @@ const handleChangeGroup = (groupName) => {
     }
     .channel-list {
       height: calc(100% - 40px);
-      overflow-y: scroll;
       color: #f0f0f0;
       background: rgba($color: #000000, $alpha: 0.8);
       .channel-item {
