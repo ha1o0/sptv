@@ -1,16 +1,23 @@
 <template>
   <div class="video-container" v-show="currentSrc">
-    <div class="video-js-box" :style="{ width: videoJsBoxWidth }">
-      <div class="video-navbar">
-        <!-- 左边显示当前播放的节目信息 -->
-        <div class="navbar-left">{{ currentGroup }} - {{ currentChannelName }}</div>
-        <!-- 右边添加一个按钮来控制播放列表的展开和收起 -->
-        <div class="navbar-right">
-          <button @click="togglePlaylist">
-            <AlignRightOutlined />
-          </button>
+    <div
+      class="video-js-box"
+      :style="{ width: videoJsBoxWidth }"
+      @mouseover="showNavbar = true"
+      @mouseleave="showNavbar = false"
+    >
+      <transition name="fade">
+        <div class="video-navbar" v-show="showNavbar">
+          <!-- 左边显示当前播放的节目信息 -->
+          <div class="navbar-left">{{ currentGroup }} - {{ currentChannelName }}</div>
+          <!-- 右边添加一个按钮来控制播放列表的展开和收起 -->
+          <div class="navbar-right">
+            <button @click="togglePlaylist">
+              <AlignRightOutlined />
+            </button>
+          </div>
         </div>
-      </div>
+      </transition>
       <video id="sptv" class="video-js" preload="auto" poster="">
         <source src="" type="video/mp4" />
         <p class="vjs-no-js">
@@ -79,6 +86,7 @@ const currentSrc = ref(props.src);
 const currentChannelName = ref(""); // 当前播放的节目名称
 const isPlaylistVisible = ref(true); // 控制播放列表的展开和收起
 const playlistWidth = ref("230px"); // 播放列表的宽度
+const showNavbar = ref(true); // 是否显示播放器顶部导航栏
 let player = null;
 
 // 计算 video-js-box 的宽度
