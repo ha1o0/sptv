@@ -174,11 +174,14 @@ const handleChangeGroup = (groupName) => {
   height: 100%;
   display: flex;
   .video-js {
-    width: 80%;
+    width: calc(100% - 230px);
     height: 100%;
+    padding: 0;
   }
   .video-playlist-container {
-    width: 20%;
+    width: 230px;
+    height: 100%; /* 设置播放列表高度为视口高度 */
+    overflow-y: auto; /* 允许播放列表内部滚动 */
     .top {
       width: 100%;
       height: 40px;
@@ -191,6 +194,7 @@ const handleChangeGroup = (groupName) => {
     }
     .channel-list {
       height: calc(100% - 40px);
+      overflow-y: auto;
       color: #f0f0f0;
       background: rgba($color: #000000, $alpha: 0.8);
       .channel-item {

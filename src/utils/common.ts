@@ -4,9 +4,9 @@
  * @returns {boolean}
  */
 export function isDateTime(value: string) {
-    // 匹配常见的时间格式
-    const dateTimeRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(Z)?$/;
-    return dateTimeRegex.test(value);
+  // 匹配常见的时间格式
+  const dateTimeRegex = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(Z)?$/;
+  return dateTimeRegex.test(value);
 }
 
 /**
@@ -15,12 +15,14 @@ export function isDateTime(value: string) {
  * @returns {string}
  */
 export function toLocalTime(value: string) {
-    if (isDateTime(value)) {
-        // 如果时间格式包含空格，替换为 "T" 以符合 Date 解析要求
-        const formattedValue = value.includes(" ") ? value.replace(" ", "T") + "Z" : value;
-        return new Date(formattedValue).toLocaleString();
-    }
-    return value; // 如果不是时间格式，返回原值
+  if (isDateTime(value)) {
+    // 如果时间格式包含空格，替换为 "T" 以符合 Date 解析要求
+    const formattedValue = value.includes(" ")
+      ? value.replace(" ", "T") + "Z"
+      : value;
+    return new Date(formattedValue).toLocaleString();
+  }
+  return value; // 如果不是时间格式，返回原值
 }
 
 /**
@@ -29,20 +31,26 @@ export function toLocalTime(value: string) {
  * @returns {object|array}
  */
 export function convertTimestampsDeep(data: any[] | null) {
-    if (Array.isArray(data)) {
-        return data.map(item => convertTimestampsDeep(item));
-    } else if (typeof data === "object" && data !== null) {
-        const result = {};
-        for (const key in data) {
-            if (typeof data[key] === "string") {
-                result[key] = toLocalTime(data[key]);
-            } else if (typeof data[key] === "object" || Array.isArray(data[key])) {
-                result[key] = convertTimestampsDeep(data[key]); // 递归处理嵌套对象或数组
-            } else {
-                result[key] = data[key];
-            }
-        }
-        return result;
+  if (Array.isArray(data)) {
+    return data.map((item) => convertTimestampsDeep(item));
+  } else if (typeof data === "object" && data !== null) {
+    const result = {};
+    for (const key in data) {
+      if (typeof data[key] === "string") {
+        result[key] = toLocalTime(data[key]);
+      } else if (typeof data[key] === "object" || Array.isArray(data[key])) {
+        result[key] = convertTimestampsDeep(data[key]); // 递归处理嵌套对象或数组
+      } else {
+        result[key] = data[key];
+      }
     }
-    return data;
+    return result;
+  }
+  return data;
+}
+
+export function getRandomInt(min: number, max: number) {
+  min = Math.ceil(min); // 向上取整
+  max = Math.floor(max); // 向下取整
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }

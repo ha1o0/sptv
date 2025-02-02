@@ -1,4 +1,5 @@
 import { emit } from '@tauri-apps/api/event'
+import { getRandomInt } from '@/utils/common';
 
 /**
  * @desc 创建新窗口
@@ -15,7 +16,7 @@ export async function openPlayerWindow(options: { src: any; sourceId: number }) 
   }
   const url = `/window/player?src=${encodeURIComponent(src)}&sourceId=${sourceId}`
   await createWin({
-      label: 'player',
+      label: 'player' + getRandomInt(0, 100),
       title: '播放器',
       url,
       width: 1200,

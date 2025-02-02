@@ -14,6 +14,7 @@ import { convertTimestampsDeep } from "@/utils/common.ts";
 import { Form } from "ant-design-vue";
 import { M3UParser } from "@/utils/m3u-parser";
 import { message } from "ant-design-vue";
+import { proxyPrefix } from "@/utils/video";
 
 // 获取路由对象
 const router = useRouter();
@@ -122,7 +123,7 @@ const toAddConfig = () => {
 
 const fetchM3U = async (url: string) => {
   try {
-    const response = await fetch(url);
+    const response = await fetch(`${proxyPrefix}${encodeURIComponent(url)}`);
     if (!response.ok) throw new Error("网络请求失败");
 
     const m3uContent = await response.text();
