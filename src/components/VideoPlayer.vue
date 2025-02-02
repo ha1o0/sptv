@@ -105,6 +105,8 @@ const initializePlayer = () => {
   player.on("error", (error) => {
     console.error("Video player error:", error);
   });
+
+  updatePlaylist(props.src);
 };
 
 // 更新视频源
@@ -113,25 +115,29 @@ const updateVideoSource = (newSrc) => {
     initializePlayer();
   } else {
     console.log("update src: ", newSrc);
-    currentSrc.value = newSrc;
-    groupList.value = props.playlist.map((item) => {
-      return { value: item.groupName, label: item.groupName };
-    });
-    console.log("groupList.value: ", groupList.value);
-    props.playlist.forEach((item) => {
-      item.channels.forEach((channel) => {
-        if (channel.url === newSrc) {
-          currentGroup.value = item.groupName;
-          currentChannels.value = item.channels;
-        }
-      });
-    });
+    updatePlaylist(newSrc);
     player.src({
       src: proxyUrl(newSrc),
       // type: "application/x-mpegURL",
     });
     player.load();
   }
+};
+
+const updatePlaylist = (newSrc) => {
+  currentSrc.value = newSrc;
+  groupList.value = props.playlist.map((item) => {
+    return { value: item.groupName, label: item.groupName };
+  });
+  console.log("groupList.value: ", groupList.value);
+  props.playlist.forEach((item) => {
+    item.channels.forEach((channel) => {
+      if (channel.url === newSrc) {
+        currentGroup.value = item.groupName;
+        currentChannels.value = item.channels;
+      }
+    });
+  });
 };
 
 const proxyUrl = (url) => {
