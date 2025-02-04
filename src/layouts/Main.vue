@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 import { reactive, watch, h, ref } from "vue";
-import { DesktopOutlined, AppstoreOutlined, UploadOutlined } from "@ant-design/icons-vue";
+import { DesktopOutlined, AppstoreOutlined, StarOutlined } from "@ant-design/icons-vue";
 import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
@@ -24,7 +24,7 @@ const items = reactive([
   },
   {
     key: "/favorite",
-    icon: () => h(UploadOutlined),
+    icon: () => h(StarOutlined),
     label: "收藏",
     title: "收藏",
     route: "Favorite",
