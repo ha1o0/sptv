@@ -54,3 +54,8 @@ export function getRandomInt(min: number, max: number) {
   max = Math.floor(max); // 向下取整
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+export function isIPv6(url: string) {
+  const ipv6Pattern = /^[0-9a-fA-F:]+$/;
+  return ipv6Pattern.test(url) && url.split(':').length >= 3; // IPv6 地址有多个 ':'，并且包含合适的段数
+}

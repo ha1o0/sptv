@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 import { reactive, watch, h, ref } from "vue";
-import {
-  DesktopOutlined,
-  AppstoreOutlined,
-  VideoCameraOutlined,
-  UploadOutlined,
-} from "@ant-design/icons-vue";
+import { DesktopOutlined, AppstoreOutlined, UploadOutlined } from "@ant-design/icons-vue";
 import { useRouter, useRoute } from "vue-router";
 
 const router = useRouter();
@@ -27,13 +22,6 @@ const items = reactive([
     title: "配置",
     route: "ConfigList",
   },
-  // {
-  //   key: '/player',
-  //   icon: () => h(VideoCameraOutlined),
-  //   label: '播放',
-  //   title: '播放',
-  //   route: 'Player',
-  // },
   {
     key: "/favorite",
     icon: () => h(UploadOutlined),

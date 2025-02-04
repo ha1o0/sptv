@@ -60,6 +60,7 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { AlignRightOutlined } from "@ant-design/icons-vue";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
+import { configProxy } from "@/utils/proxy";
 
 const props = defineProps({
   // m3u视频源地址
@@ -113,7 +114,7 @@ const initializePlayer = () => {
     preload: "auto",
     sources: [
       {
-        src: proxyUrl(props.src),
+        src: configProxy(props.src),
         headers: {
           "User-Agent": "Mozilla/5.0 (DirectPlayer)", // 简化 User-Agent
           Referer: "", // 清空 Referer
@@ -153,7 +154,7 @@ const updateVideoSource = (newSrc) => {
     console.log("update src: ", newSrc);
     updatePlaylist(newSrc);
     player.src({
-      src: proxyUrl(newSrc),
+      src: configProxy(newSrc),
     });
     player.load();
   }
@@ -174,10 +175,6 @@ const updatePlaylist = (newSrc) => {
       }
     });
   });
-};
-
-const proxyUrl = (url) => {
-  return url;
 };
 
 // 监听src属性变化

@@ -2,11 +2,13 @@
 import { message } from "ant-design-vue";
 import { CopyOutlined } from "@ant-design/icons-vue";
 import { M3UParser, M3UGroup } from "@/utils/m3u-parser";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { openPlayerWindow } from "@/windows/actions.ts";
 import { useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import Breadcrumb from "@/components/Breadcrumb.vue"; // 引入面包屑组件
+import Breadcrumb from "@/components/Breadcrumb.vue";
+import { isIPv6 } from "@/utils/common";
+import { configProxy } from "@/utils/proxy";
 
 // 获取路由对象
 const route = useRoute();
@@ -64,9 +66,13 @@ const copyUrl = (url: string) => {
             :key="channel"
             @click="play(channel.url)"
           >
-            <div class="channel-logo"><img :src="channel.logo" alt="" /></div>
+            <div class="channel-logo">
+              <img :src="configProxy(channel.logo)" alt="" />
+            </div>
             <div class="channel-name">{{ channel.name }}</div>
-            <div class="channel-actions">
+            <div class="channel-bottom">
+              <a-tag color="orange" v-if="isIPv6(channel.url)">IPV6</a-tag>
+              <a-tag color="cyan" v-else>IPV4</a-tag>
               <a-button type="link" @click.stop="copyUrl(channel.url)">
                 <template #icon><CopyOutlined /></template>
               </a-button>
@@ -131,9 +137,10 @@ const copyUrl = (url: string) => {
     color: #333;
   }
 
-  .channel-actions {
+  .channel-bottom {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
   }
 }
 </style>
