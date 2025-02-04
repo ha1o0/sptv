@@ -43,9 +43,12 @@
       <div class="channel-list">
         <div
           class="channel-item"
-          :class="{ 'channel-item-active': item.url === currentSrc }"
+          :class="{
+            'channel-item-active':
+              decodeURIComponent(item.url) === decodeURIComponent(currentSrc),
+          }"
           v-for="(item, index) in currentChannels"
-          :key="index"
+          :key="item.url + index"
           @click="updateVideoSource(item.url)"
         >
           {{ item.name }}
@@ -114,12 +117,6 @@ const initializePlayer = () => {
     sources: [
       {
         src: props.src,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (DirectPlayer)", // 简化 User-Agent
-          Referer: "", // 清空 Referer
-          "Accept-Language": "en", // 简化语言头
-          Cookie: "", // 清空 Cookie
-        },
       },
     ],
   };
@@ -164,10 +161,9 @@ const updatePlaylist = (newSrc) => {
   groupList.value = props.playlist.map((item) => {
     return { value: item.groupName, label: item.groupName };
   });
-  console.log("groupList.value: ", groupList.value);
   props.playlist.forEach((item) => {
     item.channels.forEach((channel) => {
-      if (channel.url === newSrc) {
+      if (decodeURIComponent(channel.url) === decodeURIComponent(newSrc)) {
         currentGroup.value = item.groupName;
         currentChannels.value = item.channels;
         currentChannelName.value = channel.name; // 更新当前播放的节目名称
