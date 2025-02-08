@@ -1,5 +1,6 @@
 mod db; // 声明 db 模块
 mod proxy; // 声明 proxy 模块
+mod video; // 声明 video 模块
 
 use crate::db::db::init_db;
 use crate::db::video_sources::{
@@ -7,6 +8,7 @@ use crate::db::video_sources::{
     update_video_source_command,
 };
 use crate::db::video_urls::{add_video_urls_command, get_video_urls_command};
+use crate::video::start_video_stream;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
@@ -28,6 +30,7 @@ pub async fn run() {
             delete_video_source_command,
             update_video_source_command,
             add_video_urls_command,
+            start_video_stream,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

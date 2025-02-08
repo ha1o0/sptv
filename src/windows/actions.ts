@@ -16,7 +16,7 @@ export async function openPlayerWindow(options: { src: any; sourceId: number }) 
   }
   const url = `/window/player?src=${encodeURIComponent(src)}&sourceId=${sourceId}`
   await createWin({
-      label: 'player' + getRandomInt(0, 100),
+      label: 'player',
       title: '播放器',
       url,
       width: 1200,

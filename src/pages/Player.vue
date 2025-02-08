@@ -3,6 +3,7 @@ import { M3UGroup } from "@/utils/m3u-parser";
 import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import VideoPlayer from "../components/VideoPlayer.vue"; // 确保路径正确
+import VideoPlayerNative from '../components/VideoPlayerNative.vue';
 import { useRouter } from "vue-router";
 import { M3UParser } from "@/utils/m3u-parser";
 
@@ -45,7 +46,7 @@ onMounted(async () => {
     <!-- 显示加载状态 -->
     <div v-if="loading"><a-spin /></div>
     <div v-else class="video-container">
-      <VideoPlayer :src="currentVideoSrc" :playlist="playlist" :options="videoOptions" />
+      <video-player-native :src="currentVideoSrc" :playlist="playlist" :options="videoOptions" />
     </div>
   </div>
 </template>
