@@ -22,7 +22,11 @@
     </div>
 
     <!-- 右侧播放列表 -->
-    <div class="video-playlist-container" :style="{ width: playlistWidth }">
+    <div
+      class="video-playlist-container"
+      :style="{ width: playlistWidth }"
+      :class="{ collapsed: !isPlaylistVisible }"
+    >
       <div class="top">
         <a-select
           v-model:value="currentGroup"
@@ -113,7 +117,6 @@ const videoJsBoxWidth = computed(() => {
 // 切换播放列表的展开和收起
 const togglePlaylist = () => {
   isPlaylistVisible.value = !isPlaylistVisible.value;
-  playlistWidth.value = isPlaylistVisible.value ? "230px" : "0";
 };
 
 const initWebGL = () => {
@@ -292,6 +295,9 @@ const handleChangeGroup = (groupName) => {
   width: 100%;
   height: 100%;
   display: flex;
+  overflow-x: hidden; /* 隐藏横向滚动条 */
+  position: relative; /* 确保容器不被压缩 */
+
   .video-js-box {
     position: relative;
     height: 100%;
@@ -333,11 +339,21 @@ const handleChangeGroup = (groupName) => {
     padding: 0;
   }
   .video-playlist-container {
-    width: v-bind(playlistWidth); /* 动态绑定宽度 */
+    width: 230px;
     height: 100%; /* 设置播放列表高度为视口高度 */
+    position: absolute;
+    top: 0;
+    right: 0; /* 将播放列表定位到右侧 */
+    transform: translateX(0); /* 初始位置 */
+    transition: transform 0.3s ease; /* 平移效果 */
     overflow-y: auto; /* 允许播放列表内部滚动 */
-    transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
     z-index: 5;
+
+    /* 控制播放列表收起时的平移 */
+    &.collapsed {
+      transform: translateX(100%); /* 向右平移，完全隐藏 */
+    }
+
     .top {
       width: 100%;
       height: 40px;
