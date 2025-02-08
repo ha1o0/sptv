@@ -112,7 +112,7 @@ const copyUrl = (url: string) => {
   justify-content: space-between;
   width: 200px;
   height: 160px;
-  background: lightgray;
+  background: lightslategray;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   padding: 16px;
@@ -124,9 +124,15 @@ const copyUrl = (url: string) => {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
 
+  .anticon {
+    color: whitesmoke;
+  }
+
   .channel-logo {
     > img {
       width: 50px;
+      height: 30px;
+      object-fit: contain;
     }
   }
 
@@ -134,7 +140,7 @@ const copyUrl = (url: string) => {
     font-size: 16px;
     font-weight: 500;
     text-align: center;
-    color: #333;
+    color: ghostwhite;
   }
 
   .channel-bottom {

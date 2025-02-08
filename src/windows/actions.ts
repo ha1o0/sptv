@@ -20,6 +20,6 @@ export async function openPlayerWindow(options: { src: any; sourceId: number }) 
       title: '播放器',
       url,
       width: 1200,
-      height: 703,
+      height: 900,
   })
 }

@@ -33,3 +33,7 @@
 .fade-leave-to {
   opacity: 0;
 }
+
+img[src=""], img:not([src]) {
+  opacity: 0;
+}

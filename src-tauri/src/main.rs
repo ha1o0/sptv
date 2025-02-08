@@ -1,6 +1,6 @@
-use warp::{reply::Response, Filter, Rejection};
-use warp::hyper::Body;
 use reqwest::Client;
+use warp::hyper::Body;
+use warp::{reply::Response, Filter, Rejection};
 
 #[tokio::main]
 async fn main() {
@@ -15,14 +15,18 @@ async fn main() {
             async move {
                 if let Some(url) = params.get("url") {
                     // 使用 reqwest 发送请求
-                    let resp = client.get(url).send().await.map_err(|_| warp::reject::not_found())?;
+                    let resp = client
+                        .get(url)
+                        .send()
+                        .await
+                        .map_err(|_| warp::reject::not_found())?;
 
                     let status = resp.status();
-                        let headers = resp.headers().clone();
-                        let body = resp.bytes().await.unwrap_or_default();
-                        let mut response = Response::new(Body::from(body));
-                        *response.status_mut() = status;
-                        *response.headers_mut() = headers;
+                    let headers = resp.headers().clone();
+                    let body = resp.bytes().await.unwrap_or_default();
+                    let mut response = Response::new(Body::from(body));
+                    *response.status_mut() = status;
+                    *response.headers_mut() = headers;
                     Ok::<_, Rejection>(response)
                 } else {
                     // 返回一个 404 错误
@@ -31,11 +35,11 @@ async fn main() {
             }
         });
 
-     // 配置 CORS
-     let cors = warp::cors()
-     .allow_any_origin() // 允许所有域名访问
-     .allow_methods(vec!["GET", "POST", "OPTIONS"]) // 允许的 HTTP 方法
-     .allow_headers(vec!["Content-Type"]); // 允许的请求头
+    // 配置 CORS
+    let cors = warp::cors()
+        .allow_any_origin() // 允许所有域名访问
+        .allow_methods(vec!["GET", "POST", "OPTIONS", "PUT", "HEAD"]) // 允许的 HTTP 方法
+        .allow_headers(vec!["Content-Type"]); // 允许的请求头
 
     // 应用 CORS 配置
     let routes = proxy.with(cors);
