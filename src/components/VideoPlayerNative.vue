@@ -19,15 +19,6 @@
         </div>
       </transition>
       <canvas ref="videoCanvas"></canvas>
-      <!-- <video id="sptv" class="video-js" preload="auto" poster="">
-        <source src="" type="video/mp4" />
-        <p class="vjs-no-js">
-          如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
-          <a href="https://videojs.com/html5-video-support/" target="_blank"
-            >HTML5 video</a
-          >
-        </p>
-      </video> -->
     </div>
 
     <!-- 右侧播放列表 -->
@@ -62,8 +53,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { AlignRightOutlined } from "@ant-design/icons-vue";
-// import videojs from "video.js";
-// import "video.js/dist/video-js.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -97,6 +86,24 @@ const showNavbar = ref(true); // 是否显示播放器顶部导航栏
 const videoCanvas = ref(null);
 let gl, texture;
 let player = null;
+const vertexShaderSource = `
+  attribute vec2 position;
+  attribute vec2 texcoord;
+  varying vec2 v_texcoord;
+  void main() {
+      gl_Position = vec4(position, 0.0, 1.0);
+      v_texcoord = vec2(texcoord.x, 1.0 - texcoord.y);
+  }
+`;
+
+const fragmentShaderSource = `
+  precision mediump float;
+  varying vec2 v_texcoord;
+  uniform sampler2D texture;
+  void main() {
+    gl_FragColor = texture2D(texture, v_texcoord);
+  }
+`;
 
 // 计算 video-js-box 的宽度
 const videoJsBoxWidth = computed(() => {
@@ -111,14 +118,49 @@ const togglePlaylist = () => {
 
 const initWebGL = () => {
   const canvas = videoCanvas.value;
-  canvas.width = 1000; // 你可以根据视频尺寸修改
-  canvas.height = 720;
 
   gl = canvas.getContext("webgl");
   if (!gl) {
     console.error("WebGL 不受支持");
     return;
   }
+
+  // 创建 WebGL 着色器
+  const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vertexShader, vertexShaderSource);
+  gl.compileShader(vertexShader);
+
+  const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fragmentShader, fragmentShaderSource);
+  gl.compileShader(fragmentShader);
+
+  // 创建 WebGL 程序
+  const program = gl.createProgram();
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.useProgram(program);
+
+  // 设置顶点坐标和纹理坐标
+  const vertices = new Float32Array([
+    -1, -1,  0, 0,  // 左下角
+     1, -1,  1, 0,  // 右下角
+    -1,  1,  0, 1,  // 左上角
+     1,  1,  1, 1   // 右上角
+  ]);
+
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+  const positionLocation = gl.getAttribLocation(program, "position");
+  const texcoordLocation = gl.getAttribLocation(program, "texcoord");
+
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
+
+  gl.enableVertexAttribArray(texcoordLocation);
+  gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 16, 8);
 
   // 创建 WebGL 纹理
   texture = gl.createTexture();
@@ -127,47 +169,61 @@ const initWebGL = () => {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-}
+
+  gl.useProgram(program);
+};
 
 const updateFrame = ([width, height, data]) => {
-  console.log('update frame: ', width, height, data)
-  if (!gl) return;
+  // console.log('canvas: ', videoCanvas.value)
+  if (!gl || !videoCanvas.value) return;
 
   const canvas = videoCanvas.value;
   canvas.width = width;
   canvas.height = height;
 
-  // 更新 WebGL 纹理
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, width, height, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array(data));
+  gl.viewport(0, 0, canvas.width, canvas.height);
 
-  // 渲染 WebGL 纹理
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  if (!gl.texImageInitialized) {
+    // **初始化时只调用一次 texImage2D**
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGB,
+      width,
+      height,
+      0,
+      gl.RGB,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array(data)
+    );
+    gl.texImageInitialized = true;
+  } else {
+    // **之后只用 texSubImage2D 更新数据**
+    gl.texSubImage2D(
+      gl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      width,
+      height,
+      gl.RGB,
+      gl.UNSIGNED_BYTE,
+      new Uint8Array(data)
+    );
+  }
+
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-}
+};
+
 
 // 初始化视频播放器
 const initializePlayer = () => {
   if (!props.src) {
     return;
   }
-  // // 合并默认配置和用户配置
-  // const defaultOptions = {
-  //   fluid: true, // 响应式布局
-  //   controls: true,
-  //   autoplay: true,
-  //   preload: "auto",
-  //   sources: [
-  //     {
-  //       src: props.src,
-  //     },
-  //   ],
-  // };
-
-  // const finalOptions = {
-  //   ...defaultOptions,
-  //   ...props.options,
-  // };
 
   initWebGL();
 
@@ -175,20 +231,10 @@ const initializePlayer = () => {
 };
 
 // 更新视频源
-const updateVideoSource = (newSrc) => {
-  invoke("start_video_stream", { url: newSrc });
+const updateVideoSource = async (newSrc) => {
+  await invoke("start_video_stream", { url: newSrc });
   console.log("update src: ", newSrc);
   updatePlaylist(newSrc);
-  // if (!player) {
-  //   initializePlayer();
-  // } else {
-  //   console.log("update src: ", newSrc);
-  //   updatePlaylist(newSrc);
-  //   player.src({
-  //     src: newSrc,
-  //   });
-  //   player.load();
-  // }
 };
 
 const updatePlaylist = (newSrc) => {
@@ -217,9 +263,12 @@ watch(
 );
 
 // 组件挂载时初始化播放器
-onMounted(() => {
+onMounted(async () => {
   initializePlayer();
-  listen("video_frame", (event) => updateFrame(event.payload));
+  await listen("video_frame", (event) => {
+    // console.log('mount: ', event)
+    updateFrame([event.payload[0], event.payload[1], event.payload[2]]);
+  });
 });
 
 // 组件卸载前销毁播放器
@@ -248,6 +297,7 @@ const handleChangeGroup = (groupName) => {
     height: 100%;
     padding: 0;
     transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
+    z-index: 1;
   }
   .video-navbar {
     position: absolute;
@@ -287,6 +337,7 @@ const handleChangeGroup = (groupName) => {
     height: 100%; /* 设置播放列表高度为视口高度 */
     overflow-y: auto; /* 允许播放列表内部滚动 */
     transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
+    z-index: 5;
     .top {
       width: 100%;
       height: 40px;

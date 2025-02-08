@@ -57,6 +57,7 @@ impl VideoStreamer {
                         let data = rgb_frame.data(0);
                         let width = rgb_frame.width();
                         let height = rgb_frame.height();
+                        // println!("{}, {}, {:?}", width, height, data);
 
                         // 使用 Arc<Mutex> 来访问 app_handle
                         let app_handle = app_handle.lock().unwrap();
