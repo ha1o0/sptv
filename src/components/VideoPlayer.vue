@@ -30,7 +30,11 @@
     </div>
 
     <!-- 右侧播放列表 -->
-    <div class="video-playlist-container" :style="{ width: playlistWidth }">
+    <div
+      class="video-playlist-container"
+      :style="{ width: playlistWidth }"
+      :class="{ collapsed: !isPlaylistVisible }"
+    >
       <div class="top">
         <a-select
           v-model:value="currentGroup"
@@ -100,7 +104,6 @@ const videoJsBoxWidth = computed(() => {
 // 切换播放列表的展开和收起
 const togglePlaylist = () => {
   isPlaylistVisible.value = !isPlaylistVisible.value;
-  playlistWidth.value = isPlaylistVisible.value ? "230px" : "0";
 };
 
 // 初始化视频播放器
@@ -207,12 +210,16 @@ const handleChangeGroup = (groupName) => {
   width: 100%;
   height: 100%;
   display: flex;
+  overflow-x: hidden; /* 隐藏横向滚动条 */
+  position: relative; /* 确保容器不被压缩 */
+
   .video-js-box {
     position: relative;
     height: 100%;
     padding: 0;
-    transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
+    transition: width 0.3s ease; /* 保持视频容器宽度的过渡效果 */
   }
+
   .video-navbar {
     position: absolute;
     top: 0;
@@ -241,16 +248,28 @@ const handleChangeGroup = (groupName) => {
       }
     }
   }
+
   .video-js {
     width: 100%;
     height: 100%;
     padding: 0;
   }
+
   .video-playlist-container {
-    width: v-bind(playlistWidth); /* 动态绑定宽度 */
+    width: 230px; /* 固定宽度 */
     height: 100%; /* 设置播放列表高度为视口高度 */
     overflow-y: auto; /* 允许播放列表内部滚动 */
-    transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
+    position: absolute;
+    top: 0;
+    right: 0; /* 将播放列表定位到右侧 */
+    transform: translateX(0); /* 初始位置 */
+    transition: transform 0.3s ease; /* 平移效果 */
+
+    /* 控制播放列表收起时的平移 */
+    &.collapsed {
+      transform: translateX(100%); /* 向右平移，完全隐藏 */
+    }
+
     .top {
       width: 100%;
       height: 40px;
@@ -261,11 +280,13 @@ const handleChangeGroup = (groupName) => {
       justify-content: flex-start;
       align-items: center;
     }
+
     .channel-list {
       height: calc(100% - 40px);
       overflow-y: auto;
       color: #f0f0f0;
       background: rgba($color: #000000, $alpha: 0.8);
+
       .channel-item {
         padding: 10px;
         border-bottom: solid 1px #f0f0f0;
@@ -273,6 +294,7 @@ const handleChangeGroup = (groupName) => {
         &:hover {
           background: rgba($color: #000000, $alpha: 0.5);
         }
+
         &-active {
           color: orangered;
         }
