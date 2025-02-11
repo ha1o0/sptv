@@ -68,22 +68,22 @@ impl VideoStreamer {
                         let height = rgb_frame.height() as u32;
                         let data = rgb_frame.data(0);
 
-                        let image_buffer: RgbImage = ImageBuffer::from_raw(width, height, data.to_vec())
-                            .expect("Failed to create image buffer");
+                        // let image_buffer: RgbImage = ImageBuffer::from_raw(width, height, data.to_vec())
+                        //     .expect("Failed to create image buffer");
 
                         // 编码为 JPEG 格式
-                        let mut jpeg_data = Vec::new();
-                        image::codecs::jpeg::JpegEncoder::new(&mut jpeg_data)
-                            .encode_image(&image_buffer)
-                            .expect("Failed to encode JPEG");
+                        // let mut jpeg_data = Vec::new();
+                        // image::codecs::jpeg::JpegEncoder::new(&mut jpeg_data)
+                        //     .encode_image(&image_buffer)
+                        //     .expect("Failed to encode JPEG");
 
-                        if jpeg_data.len() > 2 && jpeg_data[0] == 0xFF && jpeg_data[1] == 0xD8 &&
-                            jpeg_data[jpeg_data.len() - 2] == 0xFF && jpeg_data[jpeg_data.len() - 1] == 0xD9 {
-                             println!("JPEG 数据完整");
-                            //  VideoStreamer::save_jpeg_test(&jpeg_data);
-                         } else {
-                             println!("JPEG 数据不完整");
-                         }
+                        // if jpeg_data.len() > 2 && jpeg_data[0] == 0xFF && jpeg_data[1] == 0xD8 &&
+                        //     jpeg_data[jpeg_data.len() - 2] == 0xFF && jpeg_data[jpeg_data.len() - 1] == 0xD9 {
+                        //      println!("JPEG 数据完整");
+                        //     //  VideoStreamer::save_jpeg_test(&jpeg_data);
+                        //  } else {
+                        //      println!("JPEG 数据不完整");
+                        //  }
                         // 或者编码为 PNG 格式
                         // let mut png_data = Vec::new();
                         // image::codecs::png::PngEncoder::new(&mut png_data)
@@ -91,8 +91,8 @@ impl VideoStreamer {
                         //     .expect("Failed to encode PNG");
 
                         // 发送压缩后的帧数据到前端
-                        println!("time: {}, ori_data_len: {}, data_len: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), data.len(), jpeg_data.len());
-                        println!("image size: {}", jpeg_data.len());
+                        println!("time: {}, ori_data_len: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), data.len());
+                        // println!("image size: {}", jpeg_data.len());
                         app_handle
                             .emit("video_frame", (width, height, data))
                             .expect("Failed to emit video frame");
