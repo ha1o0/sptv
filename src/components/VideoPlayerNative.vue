@@ -146,10 +146,22 @@ const initWebGL = () => {
 
   // 设置顶点坐标和纹理坐标
   const vertices = new Float32Array([
-    -1, -1,  0, 0,  // 左下角
-     1, -1,  1, 0,  // 右下角
-    -1,  1,  0, 1,  // 左上角
-     1,  1,  1, 1   // 右上角
+    -1,
+    -1,
+    0,
+    0, // 左下角
+    1,
+    -1,
+    1,
+    0, // 右下角
+    -1,
+    1,
+    0,
+    1, // 左上角
+    1,
+    1,
+    1,
+    1, // 右上角
   ]);
 
   const buffer = gl.createBuffer();
@@ -220,7 +232,6 @@ const updateFrame = ([width, height, data]) => {
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 };
-
 
 // 初始化视频播放器
 const initializePlayer = () => {
