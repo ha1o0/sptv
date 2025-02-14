@@ -59,6 +59,7 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { AlignRightOutlined } from "@ant-design/icons-vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { WebGLRenderer } from "@/utils/webgl-renderer"; // 引入 WebGLRenderer
 
 const props = defineProps({
   // m3u视频源地址
@@ -88,26 +89,7 @@ const playlistWidth = ref("230px"); // 播放列表的宽度
 const showNavbar = ref(true); // 是否显示播放器顶部导航栏
 
 const videoCanvas = ref(null);
-let gl, texture;
-let player = null;
-const vertexShaderSource = `
-  attribute vec2 position;
-  attribute vec2 texcoord;
-  varying vec2 v_texcoord;
-  void main() {
-      gl_Position = vec4(position, 0.0, 1.0);
-      v_texcoord = vec2(texcoord.x, 1.0 - texcoord.y);
-  }
-`;
-
-const fragmentShaderSource = `
-  precision mediump float;
-  varying vec2 v_texcoord;
-  uniform sampler2D texture;
-  void main() {
-    gl_FragColor = texture2D(texture, v_texcoord);
-  }
-`;
+let webglRenderer = null; // WebGLRenderer 实例
 
 // 计算 video-js-box 的宽度
 const videoJsBoxWidth = computed(() => {
@@ -119,128 +101,12 @@ const togglePlaylist = () => {
   isPlaylistVisible.value = !isPlaylistVisible.value;
 };
 
-const initWebGL = () => {
-  const canvas = videoCanvas.value;
-
-  gl = canvas.getContext("webgl");
-  if (!gl) {
-    console.error("WebGL 不受支持");
-    return;
-  }
-
-  // 创建 WebGL 着色器
-  const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-  gl.shaderSource(vertexShader, vertexShaderSource);
-  gl.compileShader(vertexShader);
-
-  const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-  gl.shaderSource(fragmentShader, fragmentShaderSource);
-  gl.compileShader(fragmentShader);
-
-  // 创建 WebGL 程序
-  const program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-  gl.useProgram(program);
-
-  // 设置顶点坐标和纹理坐标
-  const vertices = new Float32Array([
-    -1,
-    -1,
-    0,
-    0, // 左下角
-    1,
-    -1,
-    1,
-    0, // 右下角
-    -1,
-    1,
-    0,
-    1, // 左上角
-    1,
-    1,
-    1,
-    1, // 右上角
-  ]);
-
-  const buffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-  gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-  const positionLocation = gl.getAttribLocation(program, "position");
-  const texcoordLocation = gl.getAttribLocation(program, "texcoord");
-
-  gl.enableVertexAttribArray(positionLocation);
-  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 16, 0);
-
-  gl.enableVertexAttribArray(texcoordLocation);
-  gl.vertexAttribPointer(texcoordLocation, 2, gl.FLOAT, false, 16, 8);
-
-  // 创建 WebGL 纹理
-  texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-  gl.useProgram(program);
-};
-
-const updateFrame = ([width, height, data]) => {
-  // console.log('canvas: ', videoCanvas.value)
-  if (!gl || !videoCanvas.value) return;
-
-  const canvas = videoCanvas.value;
-  canvas.width = width;
-  canvas.height = height;
-
-  gl.viewport(0, 0, canvas.width, canvas.height);
-
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  if (!gl.texImageInitialized) {
-    // **初始化时只调用一次 texImage2D**
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGB,
-      width,
-      height,
-      0,
-      gl.RGB,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array(data)
-    );
-    gl.texImageInitialized = true;
-  } else {
-    // **之后只用 texSubImage2D 更新数据**
-    gl.texSubImage2D(
-      gl.TEXTURE_2D,
-      0,
-      0,
-      0,
-      width,
-      height,
-      gl.RGB,
-      gl.UNSIGNED_BYTE,
-      new Uint8Array(data)
-    );
-  }
-
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-};
-
 // 初始化视频播放器
 const initializePlayer = () => {
   if (!props.src) {
     return;
   }
-
-  initWebGL();
-
+  webglRenderer = new WebGLRenderer(videoCanvas.value); // 初始化 WebGLRenderer
   updatePlaylist(props.src);
 };
 
@@ -280,16 +146,8 @@ watch(
 onMounted(async () => {
   initializePlayer();
   await listen("video_frame", (event) => {
-    // console.log('mount: ', event)
-    updateFrame([event.payload[0], event.payload[1], event.payload[2]]);
+    webglRenderer.updateFrame([event.payload[0], event.payload[1], event.payload[2]]);
   });
-});
-
-// 组件卸载前销毁播放器
-onBeforeUnmount(() => {
-  if (player) {
-    player.dispose();
-  }
 });
 
 const handleChangeGroup = (groupName) => {

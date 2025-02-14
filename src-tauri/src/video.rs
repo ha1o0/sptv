@@ -115,7 +115,7 @@ impl VideoStreamer {
                         );
 
                         app_handle
-                            .emit("video_frame", (width, height, os_id))
+                            .emit("video_frame", (width, height, data))
                             .expect("Failed to emit video frame");
                     }
                 }
