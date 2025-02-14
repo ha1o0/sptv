@@ -184,6 +184,17 @@ const handleChangeGroup = (groupName) => {
     padding: 0;
     transition: width 0.3s ease; /* 添加宽度变化的过渡效果 */
     z-index: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000; // 添加黑色背景
+  }
+
+  canvas {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
   }
   .video-navbar {
     position: absolute;
