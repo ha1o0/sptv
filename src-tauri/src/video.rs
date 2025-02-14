@@ -41,22 +41,27 @@ impl VideoStreamer {
 
             let decoder_width = decoder.width();
             let decoder_height = decoder.height();
-            let dst_width = 1920;
-            let dst_height = dst_width * decoder_height / decoder_width;
+
+            // 计算目标尺寸，保持宽高比
+            let dst_width = 1920; // 或其他期望的宽度
+            let dst_height =
+                (dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32;
+            // 确保高度是偶数（YUV420P 要求）
+            let dst_height = (dst_height + 1) & !1;
+
             let mut scaler = scaling::Context::get(
                 decoder.format(),
                 decoder_width,
                 decoder_height,
                 Pixel::YUV420P,
                 dst_width,
-                dst_height, // 降低分辨率
+                dst_height,
                 scaling::Flags::BILINEAR,
             )
             .unwrap();
 
             let mut frame = frame::Video::empty();
-            // let mut rgb_frame = frame::Video::empty();
-            let mut yuv_frame = frame::Video::empty();
+            let mut yuv_frame = frame::Video::new(Pixel::YUV420P, dst_width, dst_height);
 
             for (stream, packet) in ictx.packets() {
                 if stream.index() == stream_index {
@@ -66,77 +71,21 @@ impl VideoStreamer {
                     }
 
                     while decoder.receive_frame(&mut frame).is_ok() {
-                        // scaler.run(&frame, &mut rgb_frame).unwrap();
                         scaler.run(&frame, &mut yuv_frame).unwrap();
 
-                        // 将 RGB24 帧数据转换为 image::RgbImage
-                        // let width = rgb_frame.width() as u32;
-                        // let height = rgb_frame.height() as u32;
-                        // let data = rgb_frame.data(0);
+                        // 获取 YUV 数据
+                        let y_data = yuv_frame.data(0).to_vec(); // Y 分量
+                        let u_data = yuv_frame.data(1).to_vec(); // U 分量
+                        let v_data = yuv_frame.data(2).to_vec(); // V 分量
 
-                        // 获取 Y、U、V 分量
-                        let y_data = yuv_frame.data(0); // Y 分量
-                        let u_data = yuv_frame.data(1); // U 分量
-                        let v_data = yuv_frame.data(2); // V 分量
+                        // 计算正确的 plane sizes
+                        let y_size = (dst_width * dst_height) as usize;
+                        let uv_size = y_size / 4; // YUV420P 格式中 U 和 V 平面大小是 Y 平面的 1/4
 
-                        // let image_buffer: RgbImage = ImageBuffer::from_raw(width, height, data.to_vec())
-                        //     .expect("Failed to create image buffer");
-
-                        // 编码为 JPEG 格式
-                        // let mut jpeg_data = Vec::new();
-                        // image::codecs::jpeg::JpegEncoder::new(&mut jpeg_data)
-                        //     .encode_image(&image_buffer)
-                        //     .expect("Failed to encode JPEG");
-
-                        // if jpeg_data.len() > 2 && jpeg_data[0] == 0xFF && jpeg_data[1] == 0xD8 &&
-                        //     jpeg_data[jpeg_data.len() - 2] == 0xFF && jpeg_data[jpeg_data.len() - 1] == 0xD9 {
-                        //      println!("JPEG 数据完整");
-                        //     //  VideoStreamer::save_jpeg_test(&jpeg_data);
-                        //  } else {
-                        //      println!("JPEG 数据不完整");
-                        //  }
-                        // 或者编码为 PNG 格式
-                        // let mut png_data = Vec::new();
-                        // image::codecs::png::PngEncoder::new(&mut png_data)
-                        //     .encode_image(&image_buffer)
-                        //     .expect("Failed to encode PNG");
-
-                        // println!("image size: {}", jpeg_data.len());
-
-                        // // 创建共享内存
-                        // let shmem = ShmemConf::new().size(data.len()).create().unwrap();
-                        // let frame_data = std::sync::Arc::new(Mutex::new(shmem));
-
-                        // // 写入帧数据
-                        // let mut frame = frame_data.lock().unwrap();
-                        // unsafe { frame.as_slice_mut().copy_from_slice(&data) };
-
-                        // // 从 frame_data 中获取 shmem 的引用
-                        // let os_id = {
-                        //     frame.get_os_id() // 获取 os_id
-                        // };
-
-                        // println!(
-                        //     "time: {}, ori_data_len: {}, os_id: {}",
-                        //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                        //     data.len(),
-                        //     1
-                        // );
-
-                        // println!(
-                        //     "time: {}, data_len: {}, width: {}, height: {}",
-                        //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                        //     data.len(),
-                        //     dst_width,
-                        //     dst_height,
-                        // );
-
-                        // app_handle
-                        //     .emit(
-                        //         "video_frame",
-                        //         (data, dst_width, dst_height),
-                        //     )
-                        //     .expect("Failed to emit video frame");
+                        // 确保数据长度正确
+                        assert_eq!(y_data.len(), y_size);
+                        assert_eq!(u_data.len(), uv_size);
+                        assert_eq!(v_data.len(), uv_size);
 
                         println!(
                             "time: {}, y_data_len: {}, u_data_len: {}, v_data_len: {}, width: {}, height: {}",
@@ -151,7 +100,7 @@ impl VideoStreamer {
                         app_handle
                             .emit(
                                 "video_frame",
-                                (y_data, u_data, v_data, decoder_width, decoder_height),
+                                (y_data, u_data, v_data, dst_width, dst_height),
                             )
                             .expect("Failed to emit video frame");
                     }
