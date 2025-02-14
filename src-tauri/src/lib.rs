@@ -8,7 +8,7 @@ use crate::db::video_sources::{
     update_video_source_command,
 };
 use crate::db::video_urls::{add_video_urls_command, get_video_urls_command};
-use crate::video::start_video_stream;
+use crate::video::{get_video_frame, start_video_stream};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
@@ -31,6 +31,7 @@ pub async fn run() {
             update_video_source_command,
             add_video_urls_command,
             start_video_stream,
+            get_video_frame,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,9 +1,11 @@
 use ffmpeg_next::{codec, format, frame, software::scaling, util::format::Pixel};
-use image::{ImageBuffer, RgbImage};
+// use image::{ImageBuffer, RgbImage};
+// use std::fs::File;
+// use std::io::Write;
+use shared_memory::*;
+use std::sync::Mutex;
 use std::thread;
 use tauri::{AppHandle, Emitter};
-use std::fs::File;
-use std::io::Write;
 
 struct VideoStreamer {
     app_handle: AppHandle,
@@ -14,10 +16,10 @@ impl VideoStreamer {
         VideoStreamer { app_handle }
     }
 
-    pub fn save_jpeg_test(data: &[u8]) {
-        let mut file = File::create("test.jpg").expect("Failed to create file");
-        file.write_all(data).expect("Failed to write data");
-    }
+    // pub fn save_jpeg_test(data: &[u8]) {
+    //     let mut file = File::create("test.jpg").expect("Failed to create file");
+    //     file.write_all(data).expect("Failed to write data");
+    // }
 
     pub fn start_stream(&self, url: String) {
         let app_handle = self.app_handle.clone();
@@ -44,8 +46,8 @@ impl VideoStreamer {
                 decoder_width,
                 decoder_height,
                 Pixel::RGB24, // 使用 RGB24 格式
-                320,
-                320 * decoder_height / decoder_width, // 降低分辨率
+                1920,
+                1920 * decoder_height / decoder_width, // 降低分辨率
                 scaling::Flags::BILINEAR,
             )
             .unwrap();
@@ -90,11 +92,30 @@ impl VideoStreamer {
                         //     .encode_image(&image_buffer)
                         //     .expect("Failed to encode PNG");
 
-                        // 发送压缩后的帧数据到前端
-                        println!("time: {}, ori_data_len: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"), data.len());
                         // println!("image size: {}", jpeg_data.len());
+
+                        // 创建共享内存
+                        let shmem = ShmemConf::new().size(data.len()).create().unwrap();
+                        let frame_data = std::sync::Arc::new(Mutex::new(shmem));
+
+                        // 写入帧数据
+                        let mut frame = frame_data.lock().unwrap();
+                        unsafe { frame.as_slice_mut().copy_from_slice(&data) };
+
+                        // 从 frame_data 中获取 shmem 的引用
+                        let os_id = {
+                            frame.get_os_id() // 获取 os_id
+                        };
+
+                        println!(
+                            "time: {}, ori_data_len: {}, os_id: {}",
+                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                            data.len(),
+                            os_id
+                        );
+
                         app_handle
-                            .emit("video_frame", (width, height, data))
+                            .emit("video_frame", (width, height, os_id))
                             .expect("Failed to emit video frame");
                     }
                 }
@@ -107,4 +128,20 @@ impl VideoStreamer {
 pub fn start_video_stream(app: tauri::AppHandle, url: String) {
     let streamer = VideoStreamer::new(app);
     streamer.start_stream(url);
+}
+
+#[tauri::command]
+pub fn get_video_frame(frame_os_id: &str) -> Vec<u8> {
+    return get_video_frame_test(frame_os_id);
+}
+
+pub fn get_video_frame_test(os_id: &str) -> Vec<u8> {
+    // 通过 os_id 打开共享内存
+    let shmem = ShmemConf::new()
+        .os_id(os_id)
+        .open()
+        .expect("Failed to open shared memory");
+    // 从共享内存中读取数据
+    let slice = unsafe { shmem.as_slice() };
+    slice.to_vec()
 }
