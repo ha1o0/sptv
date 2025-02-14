@@ -77,7 +77,7 @@ export class WebGLRenderer {
     return program;
   }
 
-  updateFrame([width, height, data]) {
+  renderFrame(data, width, height) {
     if (!this.gl || !this.canvas) return;
 
     this.canvas.width = width;

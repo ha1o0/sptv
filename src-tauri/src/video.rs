@@ -121,20 +121,35 @@ impl VideoStreamer {
                         //     1
                         // );
 
+                        // println!(
+                        //     "time: {}, data_len: {}, width: {}, height: {}",
+                        //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                        //     data.len(),
+                        //     decoder_width,
+                        //     decoder_height,
+                        // );
+
+                        // app_handle
+                        //     .emit(
+                        //         "video_frame",
+                        //         (data, decoder_width, decoder_height),
+                        //     )
+                        //     .expect("Failed to emit video frame");
+
                         println!(
-                            "time: {}, width: {}, height: {}, y_data_len: {}, u_data_len: {}, v_data_len: {}",
+                            "time: {}, y_data_len: {}, u_data_len: {}, v_data_len: {}, width: {}, height: {}",
                             chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                            decoder_width,
-                            decoder_height,
                             y_data.len(),
                             u_data.len(),
                             v_data.len(),
+                            decoder_width,
+                            decoder_height,
                         );
 
                         app_handle
                             .emit(
                                 "video_frame",
-                                (decoder_width, decoder_height, y_data, u_data, v_data),
+                                (y_data, u_data, v_data, decoder_width, decoder_height),
                             )
                             .expect("Failed to emit video frame");
                     }
