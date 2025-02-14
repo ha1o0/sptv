@@ -41,13 +41,15 @@ impl VideoStreamer {
 
             let decoder_width = decoder.width();
             let decoder_height = decoder.height();
+            let dst_width = 1920;
+            let dst_height = dst_width * decoder_height / decoder_width;
             let mut scaler = scaling::Context::get(
                 decoder.format(),
                 decoder_width,
                 decoder_height,
                 Pixel::YUV420P,
-                1920,
-                1920 * decoder_height / decoder_width, // 降低分辨率
+                dst_width,
+                dst_height, // 降低分辨率
                 scaling::Flags::BILINEAR,
             )
             .unwrap();
@@ -125,14 +127,14 @@ impl VideoStreamer {
                         //     "time: {}, data_len: {}, width: {}, height: {}",
                         //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
                         //     data.len(),
-                        //     decoder_width,
-                        //     decoder_height,
+                        //     dst_width,
+                        //     dst_height,
                         // );
 
                         // app_handle
                         //     .emit(
                         //         "video_frame",
-                        //         (data, decoder_width, decoder_height),
+                        //         (data, dst_width, dst_height),
                         //     )
                         //     .expect("Failed to emit video frame");
 
@@ -142,8 +144,8 @@ impl VideoStreamer {
                             y_data.len(),
                             u_data.len(),
                             v_data.len(),
-                            decoder_width,
-                            decoder_height,
+                            dst_width,
+                            dst_height,
                         );
 
                         app_handle
