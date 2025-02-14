@@ -59,7 +59,8 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import { AlignRightOutlined } from "@ant-design/icons-vue";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { WebGLRenderer } from "@/utils/webgl-renderer"; // 引入 WebGLRenderer
+import { WebGLRenderer } from "@/utils/webgl-renderer";
+import { YUVRenderer } from "@/utils/yuv-webgl-renderer";
 
 const props = defineProps({
   // m3u视频源地址
@@ -90,6 +91,7 @@ const showNavbar = ref(true); // 是否显示播放器顶部导航栏
 
 const videoCanvas = ref(null);
 let webglRenderer = null; // WebGLRenderer 实例
+let yuvRenderer = null; // YUVRenderer 实例
 
 // 计算 video-js-box 的宽度
 const videoJsBoxWidth = computed(() => {
@@ -106,7 +108,8 @@ const initializePlayer = () => {
   if (!props.src) {
     return;
   }
-  webglRenderer = new WebGLRenderer(videoCanvas.value); // 初始化 WebGLRenderer
+  // webglRenderer = new WebGLRenderer(videoCanvas.value);
+  yuvRenderer = new YUVRenderer(videoCanvas.value);
   updatePlaylist(props.src);
 };
 
@@ -143,10 +146,11 @@ watch(
 );
 
 // 组件挂载时初始化播放器
-onMounted(async () => {
+onMounted(() => {
   initializePlayer();
-  await listen("video_frame", (event) => {
-    webglRenderer.updateFrame([event.payload[0], event.payload[1], event.payload[2]]);
+  listen("video_frame", (event) => {
+    yuvRenderer.renderFrame(event.payload[0], event.payload[1], event.payload[2], event.payload[3], event.payload[4]);
+    // webglRenderer.updateFrame([event.payload[0], event.payload[1], event.payload[2]]);
   });
 });
 
