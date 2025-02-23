@@ -37,5 +37,5 @@ pub async fn start_proxy_server() {
 
     let routes = proxy.with(cors);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3000)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], 3001)).await;
 }

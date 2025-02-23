@@ -1,9 +1,11 @@
-use ffmpeg_next::{codec, format, frame, software::scaling, util::format::Pixel};
+use ffmpeg_next::decoder::Video;
+use ffmpeg_next::{self as ffmpeg, Rational};
+use ffmpeg_next::{codec::{self}, format, frame, software::scaling, util::format::Pixel, Codec};
+use ffmpeg::codec::context::Context as CodecContext;
 // use image::{ImageBuffer, RgbImage};
 // use std::fs::File;
 // use std::io::Write;
 use shared_memory::*;
-use std::sync::Mutex;
 use std::thread;
 use tauri::{AppHandle, Emitter};
 
@@ -16,10 +18,54 @@ impl VideoStreamer {
         VideoStreamer { app_handle }
     }
 
-    // pub fn save_jpeg_test(data: &[u8]) {
-    //     let mut file = File::create("test.jpg").expect("Failed to create file");
-    //     file.write_all(data).expect("Failed to write data");
+    /// Get the `time_base` field of an encoder. (Not natively supported in the public API.)
+    // pub fn get_encoder_time_base(encoder: &Video) -> Rational {
+    //     unsafe { (*encoder.0.as_ptr()).time_base.into() }
     // }
+    /// Initialize a new codec context using a specific codec.
+    pub fn codec_context_as(codec: &Option<Codec>) -> Option<CodecContext> {
+        match codec {
+            None => Some(CodecContext::new()),
+            Some(codec) => unsafe {
+                let context_ptr = ffmpeg::ffi::avcodec_alloc_context3(codec.as_ptr());
+                println!("context_ptr: {:?}", context_ptr);
+                if !context_ptr.is_null() {
+                    println!("context_ptr:not null");
+                    Some(CodecContext::wrap(context_ptr, None))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    fn select_best_decoder(codec_id: ffmpeg_next::ffi::AVCodecID) -> Option<Codec> {
+        match codec_id {
+            ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_H264 => {
+                codec::decoder::find_by_name("h264_qsv")
+                    // .or_else(|| codec::decoder::find_by_name("h264_qsv"))
+                    // .or_else(|| codec::decoder::find_by_name("h264_cuvid"))
+                    .or_else(|| codec::decoder::find(codec::Id::H264))
+            }
+            ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_HEVC => {
+                codec::decoder::find_by_name("hevc_qsv")
+                    .or_else(|| codec::decoder::find_by_name("hevc_vaapi"))
+                    .or_else(|| codec::decoder::find_by_name("hevc_amf"))
+                    .or_else(|| codec::decoder::find(codec::Id::HEVC))
+            }
+            ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_VP9 => {
+                codec::decoder::find_by_name("vp9_cuvid")
+                    .or_else(|| codec::decoder::find_by_name("vp9_vaapi"))
+                    .or_else(|| codec::decoder::find(codec::Id::VP9))
+            }
+            ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_AV1 => {
+                codec::decoder::find_by_name("av1_cuvid")
+                    .or_else(|| codec::decoder::find_by_name("av1_vaapi"))
+                    .or_else(|| codec::decoder::find(codec::Id::AV1))
+            }
+            _ => None,
+        }
+    }
 
     pub fn start_stream(&self, url: String) {
         let app_handle = self.app_handle.clone();
@@ -33,24 +79,38 @@ impl VideoStreamer {
                 .expect("没有找到视频流");
             let stream_index = stream.index();
 
-            let mut decoder = codec::Context::from_parameters(stream.parameters())
-                .unwrap()
-                .decoder()
-                .video()
-                .unwrap();
+            // let mut adecoder = codec::Context::from_parameters(stream.parameters())
+            //     .unwrap()
+            //     .decoder()
+            //     .video()
+            //     .unwrap();
+            // let binding = adecoder.codec().unwrap();
+            // let decoder_name = binding.name();
+            // println!("使用的解码器1: {}", decoder_name);
 
-            let decoder_width = decoder.width();
-            let decoder_height = decoder.height();
+            let codec_id = stream.parameters().id();
+            println!("codec_id: {:?}", codec_id);
+            let best_coder = Self::select_best_decoder(codec_id.into());
+            if let Some(c) = &best_coder {
+                println!("使用的解码器2: {}", c.name());
+            } else {
+                println!("未找到合适的解码器");
+            }
+            let mut decoder = Self::codec_context_as(&best_coder).unwrap().decoder().video().unwrap();
+            println!("解码器格式: {:?}", decoder.format());
 
-            // 计算目标尺寸，保持宽高比
-            let dst_width = 1920; // 或其他期望的宽度
-            let dst_height =
-                (dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32;
-            // 确保高度是偶数（YUV420P 要求）
-            let dst_height = (dst_height + 1) & !1;
+            let decoder_width = 1920;
+            let decoder_height = 1080;
+
+            if decoder_width == 0 || decoder_height == 0 {
+                eprintln!("Invalid decoder dimensions: {}x{}", decoder_width, decoder_height);
+            }
+
+            let dst_width = 1920;
+            let dst_height = ((dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32 + 1) & !1;
 
             let mut scaler = scaling::Context::get(
-                decoder.format(),
+                Pixel::NV12,
                 decoder_width,
                 decoder_height,
                 Pixel::YUV420P,
@@ -73,16 +133,13 @@ impl VideoStreamer {
                     while decoder.receive_frame(&mut frame).is_ok() {
                         scaler.run(&frame, &mut yuv_frame).unwrap();
 
-                        // 获取 YUV 数据
-                        let y_data = yuv_frame.data(0).to_vec(); // Y 分量
-                        let u_data = yuv_frame.data(1).to_vec(); // U 分量
-                        let v_data = yuv_frame.data(2).to_vec(); // V 分量
+                        let y_data = yuv_frame.data(0).to_vec();
+                        let u_data = yuv_frame.data(1).to_vec();
+                        let v_data = yuv_frame.data(2).to_vec();
 
-                        // 计算正确的 plane sizes
                         let y_size = (dst_width * dst_height) as usize;
-                        let uv_size = y_size / 4; // YUV420P 格式中 U 和 V 平面大小是 Y 平面的 1/4
+                        let uv_size = y_size / 4;
 
-                        // 确保数据长度正确
                         assert_eq!(y_data.len(), y_size);
                         assert_eq!(u_data.len(), uv_size);
                         assert_eq!(v_data.len(), uv_size);

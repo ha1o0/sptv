@@ -1,6 +1,6 @@
 import videojs from "video.js";
 
-export const proxyPrefix = "http://localhost:3000/proxy?url=";
+export const proxyPrefix = "http://localhost:3001/proxy?url=";
 
 export class CustomVideo {
   static configProxy() {

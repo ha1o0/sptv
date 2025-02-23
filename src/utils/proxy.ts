@@ -1,4 +1,4 @@
-const proxyPrefix = "http://localhost:3000/proxy?url=";
+const proxyPrefix = "http://localhost:3001/proxy?url=";
 const configProxy = (url: string) => {
     if (!url.startsWith('http')) {
         return url;
