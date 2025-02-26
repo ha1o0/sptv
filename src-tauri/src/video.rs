@@ -12,6 +12,7 @@ use ffmpeg_next::{
 // use std::fs::File;
 // use std::io::Write;
 use shared_memory::*;
+use std::io::Error;
 use std::thread;
 use tauri::{AppHandle, Emitter};
 
@@ -198,6 +199,33 @@ pub fn start_video_stream(app: tauri::AppHandle, url: String) {
 #[tauri::command]
 pub fn get_video_frame(frame_os_id: &str) -> Vec<u8> {
     return get_video_frame_test(frame_os_id);
+}
+
+#[tauri::command]
+pub fn test_frame_data() -> Vec<u8> {
+    generate_vec(2_073_600)
+}
+
+#[tauri::command]
+pub fn test_frame_data2(_request: tauri::ipc::Request<'_>) -> tauri::ipc::Response {
+    let arr = generate_vec(2_073_600);
+    tauri::ipc::Response::new(arr.clone())
+}
+
+pub fn generate_vec(size: i32) -> Vec<u8> {
+    println!(
+        "开始生成时间: {}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f")
+    );
+    let mut rng = rand::thread_rng();
+    let arr: Vec<u8> = (0..size)
+        .map(|_| rand::Rng::gen_range(&mut rng, 0..10))
+        .collect();
+    println!(
+        "结束生成时间: {}",
+        chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f")
+    );
+    arr
 }
 
 pub fn get_video_frame_test(os_id: &str) -> Vec<u8> {

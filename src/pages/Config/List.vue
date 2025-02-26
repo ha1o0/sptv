@@ -105,6 +105,10 @@ async function addVideoUrls(sourceId: any, videoUrls: any) {
   await invoke("add_video_urls_command", { sourceId, videoUrls });
 }
 
+async function test() {
+  return await invoke("test_frame_data2");
+}
+
 async function getSources() {
   const sources: any = await invoke("get_video_sources_command");
   console.log("sources: ", sources);
@@ -187,6 +191,13 @@ const toDeleteConfig = async (key: string) => {
   await getSources();
 };
 
+const toTest = async () => {
+  console.log("开始请求帧数据：", new Date().toLocaleString() + '.' + new Date().getMilliseconds());
+  const result = await test();
+  console.log("收到数据：", new Date().toLocaleString() + '.' + new Date().getMilliseconds());
+  console.log(result);
+}
+
 getSources();
 </script>
 
@@ -200,6 +211,12 @@ getSources();
         </template>
         添加配置
       </a-button>
+      <!-- <a-button type="primary" shape="round" @click="toTest">
+        <template #icon>
+          <PlusCircleTwoTone />
+        </template>
+        测试
+      </a-button> -->
     </div>
 
     <!-- 表格 -->

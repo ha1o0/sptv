@@ -34,3 +34,4 @@ winit = "0.30"                                                       # 窗口管
 cpal = "0.15"                                                        # 音频播放
 image = "0.24"
 shared_memory = "0.12.4"
+rand = "0.8"
