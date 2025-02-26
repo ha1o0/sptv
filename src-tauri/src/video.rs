@@ -1,7 +1,13 @@
+use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
 use ffmpeg_next::{self as ffmpeg, Rational};
-use ffmpeg_next::{codec::{self}, format, frame, software::scaling, util::format::Pixel, Codec};
-use ffmpeg::codec::context::Context as CodecContext;
+use ffmpeg_next::{
+    codec::{self},
+    format, frame,
+    software::scaling,
+    util::format::Pixel,
+    Codec,
+};
 // use image::{ImageBuffer, RgbImage};
 // use std::fs::File;
 // use std::io::Write;
@@ -19,9 +25,9 @@ impl VideoStreamer {
     }
 
     /// Get the `time_base` field of an encoder. (Not natively supported in the public API.)
-    // pub fn get_encoder_time_base(encoder: &Video) -> Rational {
-    //     unsafe { (*encoder.0.as_ptr()).time_base.into() }
-    // }
+    pub fn get_encoder_time_base(encoder: &Video) -> Rational {
+        unsafe { (*encoder.0.as_ptr()).time_base.into() }
+    }
     /// Initialize a new codec context using a specific codec.
     pub fn codec_context_as(codec: &Option<Codec>) -> Option<CodecContext> {
         match codec {
@@ -35,36 +41,38 @@ impl VideoStreamer {
                 } else {
                     None
                 }
-            }
+            },
         }
     }
 
     fn select_best_decoder(codec_id: ffmpeg_next::ffi::AVCodecID) -> Option<Codec> {
-        match codec_id {
+        let result = match codec_id {
             ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_H264 => {
                 codec::decoder::find_by_name("h264_qsv")
-                    // .or_else(|| codec::decoder::find_by_name("h264_qsv"))
-                    // .or_else(|| codec::decoder::find_by_name("h264_cuvid"))
-                    .or_else(|| codec::decoder::find(codec::Id::H264))
+                    .or_else(|| codec::decoder::find_by_name("h264_amf"))
+                    .or_else(|| codec::decoder::find_by_name("h264_cuvid"))
+                    .or_else(|| None)
             }
             ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_HEVC => {
                 codec::decoder::find_by_name("hevc_qsv")
                     .or_else(|| codec::decoder::find_by_name("hevc_vaapi"))
                     .or_else(|| codec::decoder::find_by_name("hevc_amf"))
-                    .or_else(|| codec::decoder::find(codec::Id::HEVC))
+                    .or_else(|| None)
             }
             ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_VP9 => {
                 codec::decoder::find_by_name("vp9_cuvid")
                     .or_else(|| codec::decoder::find_by_name("vp9_vaapi"))
-                    .or_else(|| codec::decoder::find(codec::Id::VP9))
+                    .or_else(|| None)
             }
             ffmpeg_next::ffi::AVCodecID::AV_CODEC_ID_AV1 => {
                 codec::decoder::find_by_name("av1_cuvid")
                     .or_else(|| codec::decoder::find_by_name("av1_vaapi"))
-                    .or_else(|| codec::decoder::find(codec::Id::AV1))
+                    .or_else(|| None)
             }
             _ => None,
-        }
+        };
+
+        result
     }
 
     pub fn start_stream(&self, url: String) {
@@ -79,38 +87,52 @@ impl VideoStreamer {
                 .expect("没有找到视频流");
             let stream_index = stream.index();
 
-            // let mut adecoder = codec::Context::from_parameters(stream.parameters())
-            //     .unwrap()
-            //     .decoder()
-            //     .video()
-            //     .unwrap();
-            // let binding = adecoder.codec().unwrap();
-            // let decoder_name = binding.name();
-            // println!("使用的解码器1: {}", decoder_name);
-
             let codec_id = stream.parameters().id();
             println!("codec_id: {:?}", codec_id);
+            // 尝试选择最佳硬件解码器
             let best_coder = Self::select_best_decoder(codec_id.into());
-            if let Some(c) = &best_coder {
-                println!("使用的解码器2: {}", c.name());
+            let mut is_hardware_decoder = false;
+            let mut decoder = if let Some(c) = &best_coder {
+                println!("使用的硬件解码器: {}", c.name());
+                is_hardware_decoder = true;
+                Self::codec_context_as(&best_coder)
+                    .unwrap()
+                    .decoder()
+                    .video()
+                    .unwrap()
             } else {
-                println!("未找到合适的解码器");
-            }
-            let mut decoder = Self::codec_context_as(&best_coder).unwrap().decoder().video().unwrap();
+                // 回退到软件解码器
+                println!("未找到合适的硬件解码器，回退到软件解码器");
+                codec::Context::from_parameters(stream.parameters())
+                    .unwrap()
+                    .decoder()
+                    .video()
+                    .unwrap()
+            };
+
+            let decoder_format = if is_hardware_decoder {
+                Pixel::NV12
+            } else {
+                decoder.format()
+            };
             println!("解码器格式: {:?}", decoder.format());
 
             let decoder_width = 1920;
             let decoder_height = 1080;
 
             if decoder_width == 0 || decoder_height == 0 {
-                eprintln!("Invalid decoder dimensions: {}x{}", decoder_width, decoder_height);
+                eprintln!(
+                    "Invalid decoder dimensions: {}x{}",
+                    decoder_width, decoder_height
+                );
             }
 
-            let dst_width = 1920;
-            let dst_height = ((dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32 + 1) & !1;
+            let dst_width = 640;
+            let dst_height =
+                ((dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32 + 1) & !1;
 
             let mut scaler = scaling::Context::get(
-                Pixel::NV12,
+                decoder_format,
                 decoder_width,
                 decoder_height,
                 Pixel::YUV420P,
