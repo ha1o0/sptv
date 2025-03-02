@@ -1,3 +1,6 @@
+mod ring_buffer;
+mod ts_cache;
+
 use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
 use ffmpeg_next::{self as ffmpeg, Rational};
@@ -12,9 +15,12 @@ use ffmpeg_next::{
 // use std::fs::File;
 // use std::io::Write;
 use shared_memory::*;
+use std::fmt::Debug;
 use std::io::Error;
 use std::thread;
 use tauri::{AppHandle, Emitter};
+use ring_buffer::{RingBuffer, VideoFrame};
+use std::sync::{Arc, Mutex};
 
 struct VideoStreamer {
     app_handle: AppHandle,
@@ -26,7 +32,7 @@ impl VideoStreamer {
     }
 
     /// Get the `time_base` field of an encoder. (Not natively supported in the public API.)
-    pub fn get_encoder_time_base(encoder: &Video) -> Rational {
+    pub fn _get_encoder_time_base(encoder: &Video) -> Rational {
         unsafe { (*encoder.0.as_ptr()).time_base.into() }
     }
     /// Initialize a new codec context using a specific codec.
@@ -78,15 +84,21 @@ impl VideoStreamer {
 
     pub fn start_stream(&self, url: String) {
         let app_handle = self.app_handle.clone();
+        let ring_buffer = Arc::new(Mutex::new(RingBuffer::new(10)));
+        ffmpeg_next::init().unwrap();
         thread::spawn(move || {
-            ffmpeg_next::init().unwrap();
-
             let mut ictx = format::input(&url).expect("无法打开 M3U8 流");
             let stream = ictx
                 .streams()
                 .best(ffmpeg_next::media::Type::Video)
                 .expect("没有找到视频流");
             let stream_index = stream.index();
+            let fps = stream.avg_frame_rate();
+            let frame_rate = fps.numerator() / fps.denominator();
+            println!("帧率: {}", frame_rate);
+
+            let decoder_width = 1920;
+            let decoder_height = 1080;
 
             let codec_id = stream.parameters().id();
             println!("codec_id: {:?}", codec_id);
@@ -116,11 +128,7 @@ impl VideoStreamer {
             } else {
                 decoder.format()
             };
-            println!("解码器格式: {:?}", decoder.format());
-
-            let decoder_width = 1920;
-            let decoder_height = 1080;
-
+            println!("解码器格式: {:?}", decoder_format);
             if decoder_width == 0 || decoder_height == 0 {
                 eprintln!(
                     "Invalid decoder dimensions: {}x{}",

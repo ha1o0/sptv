@@ -192,11 +192,17 @@ const toDeleteConfig = async (key: string) => {
 };
 
 const toTest = async () => {
-  console.log("开始请求帧数据：", new Date().toLocaleString() + '.' + new Date().getMilliseconds());
+  console.log(
+    "开始请求帧数据：",
+    new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  );
   const result = await test();
-  console.log("收到数据：", new Date().toLocaleString() + '.' + new Date().getMilliseconds());
+  console.log(
+    "收到数据：",
+    new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  );
   console.log(result);
-}
+};
 
 getSources();
 </script>
@@ -211,12 +217,12 @@ getSources();
         </template>
         添加配置
       </a-button>
-      <!-- <a-button type="primary" shape="round" @click="toTest">
+      <a-button type="primary" shape="round" @click="toTest">
         <template #icon>
           <PlusCircleTwoTone />
         </template>
         测试
-      </a-button> -->
+      </a-button>
     </div>
 
     <!-- 表格 -->
