@@ -1,11 +1,11 @@
+use reqwest::Client;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::sync::Mutex; // 使用 tokio::sync::Mutex
 use tokio::time::{sleep, Duration};
-use reqwest::Client;
 use url::Url;
-use std::sync::Arc;
 
 const CACHE_DIR: &str = "./ts_cache";
 const CACHE_SIZE: usize = 10; // 缓存的TS数量
@@ -32,10 +32,17 @@ impl TsCache {
                 Ok((segments, total_duration, sequence)) => {
                     let cache_clone = Arc::clone(&self.cache);
                     let m3u8_url_clone = self.m3u8_url.clone();
+                    println!("segments: {:?}", segments);
+                    println!("total_duration: {}", total_duration);
+                    println!("sequence: {}", sequence);
+                    println!("m3u8_url_clone: {}", m3u8_url_clone);
                     tokio::spawn(async move {
+                        println!("manage_cache");
                         Self::manage_cache(&m3u8_url_clone, segments, sequence, cache_clone).await;
                     });
-                    sleep(Duration::from_secs(total_duration / 2)).await;
+                    let sleep_duration = Duration::from_secs(total_duration / 2);
+                    println!("sleep_duration: {}", sleep_duration.as_secs());
+                    sleep(sleep_duration).await;
                 }
                 Err(e) => eprintln!("Error fetching M3U8: {e}"),
             }
@@ -47,16 +54,28 @@ impl TsCache {
         let mut segments = Vec::new();
         let mut total_duration = 0;
         let mut sequence = 0;
+        let mut current_duration = 0.0;
 
-        for line in body.lines() {
+        let lines: Vec<&str> = body.lines().collect();
+        for (i, line) in lines.iter().enumerate() {
             if line.starts_with("#EXT-X-MEDIA-SEQUENCE:") {
                 sequence = line[22..].parse::<u64>().unwrap_or(0);
             } else if line.starts_with("#EXTINF:") {
-                let duration: u64 = line[8..line.len() - 1].parse().unwrap_or(0);
-                total_duration += duration;
-                if let Some(next_line) = body.lines().skip_while(|l| *l != line).nth(1) {
-                    if next_line.ends_with(".ts") {
-                        segments.push((next_line.to_string(), duration));
+                // 正确解析浮点数duration
+                if let Some(duration_str) = line.split(':').nth(1) {
+                    if let Some(duration_num) =
+                        duration_str.trim_end_matches(',').parse::<f64>().ok()
+                    {
+                        current_duration = duration_num;
+                        total_duration += current_duration.ceil() as u64;
+                    }
+                }
+
+                // 确保还有下一行，且为ts文件
+                if i + 1 < lines.len() {
+                    let next_line = lines[i + 1];
+                    if !next_line.starts_with('#') {
+                        segments.push((next_line.to_string(), current_duration.ceil() as u64));
                     }
                 }
             }
@@ -64,7 +83,12 @@ impl TsCache {
         Ok((segments, total_duration, sequence))
     }
 
-    async fn manage_cache(m3u8_url: &str, segments: Vec<(String, u64)>, sequence: u64, cache: Arc<Mutex<Vec<(String, u64)>>>) {
+    async fn manage_cache(
+        m3u8_url: &str,
+        segments: Vec<(String, u64)>,
+        sequence: u64,
+        cache: Arc<Mutex<Vec<(String, u64)>>>,
+    ) {
         let mut cache_lock = cache.lock().await; // 使用 await 获取锁
 
         if !cache_lock.is_empty() {
@@ -82,6 +106,7 @@ impl TsCache {
                 let _ = fs::remove_file(&old_path);
             }
             let ts_url = Self::complete_ts_url(m3u8_url, &segment).unwrap();
+            println!("ts_url: {}", ts_url);
             if let Err(e) = Self::download_ts(&ts_url, &segment).await {
                 eprintln!("Error downloading TS: {e}");
             } else {
@@ -91,12 +116,17 @@ impl TsCache {
     }
 
     async fn download_ts(ts_url: &str, segment: &str) -> Result<(), reqwest::Error> {
-        let path = format!("{}/{}", CACHE_DIR, segment);
+        // 去除查询参数，只保留.ts文件名
+        let clean_segment = segment.split('?').next().unwrap_or(segment);
+        let path = format!("{}/{}", CACHE_DIR, clean_segment);
+        println!("path: {}", path);
         if Path::new(&path).exists() {
+            println!("{} already exists", path);
             return Ok(());
         }
         let client = Client::new();
         let response = client.get(ts_url).send().await?.bytes().await?;
+        println!("response: {}", response.len());
         let mut file = File::create(&path).unwrap();
         file.write_all(&response).unwrap();
         Ok(())
@@ -105,7 +135,9 @@ impl TsCache {
     /// - 返回完整的 TS 文件 URL
     pub fn complete_ts_url(m3u8_url: &str, ts_path: &str) -> Option<String> {
         let base_url = Url::parse(m3u8_url).ok()?.join(".").ok()?; // 解析 base_url
-        let full_url = Url::parse(ts_path).or_else(|_| base_url.join(ts_path)).ok()?; // 处理相对路径
+        let full_url = Url::parse(ts_path)
+            .or_else(|_| base_url.join(ts_path))
+            .ok()?; // 处理相对路径
         Some(full_url.to_string())
     }
 }
