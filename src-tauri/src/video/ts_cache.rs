@@ -10,19 +10,28 @@ use url::Url;
 const CACHE_DIR: &str = "./ts_cache";
 const CACHE_SIZE: usize = 10; // 缓存的TS数量
 
+use md5;
+
 pub struct TsCache {
     client: Client,
-    cache: Arc<Mutex<Vec<(String, u64)>>>, // 使用 tokio::sync::Mutex
+    cache: Arc<Mutex<Vec<(String, u64)>>>,
     m3u8_url: String,
+    cache_dir: String, // 添加缓存目录字段
 }
 
 impl TsCache {
     pub fn new(m3u8_url: String) -> Self {
-        fs::create_dir_all(CACHE_DIR).unwrap();
+        // 使用 m3u8_url 的哈希值作为缓存子目录名
+        let hash = format!("{:x}", md5::compute(&m3u8_url));
+        let cache_dir = format!("{}/{}", CACHE_DIR, hash);
+
+        fs::create_dir_all(&cache_dir).unwrap();
+
         Self {
             client: Client::new(),
             cache: Arc::new(Mutex::new(Vec::new())),
             m3u8_url,
+            cache_dir,
         }
     }
 
@@ -32,13 +41,21 @@ impl TsCache {
                 Ok((segments, total_duration, sequence)) => {
                     let cache_clone = Arc::clone(&self.cache);
                     let m3u8_url_clone = self.m3u8_url.clone();
+                    let cache_dir_clone = self.cache_dir.clone();
                     println!("segments: {:?}", segments);
                     println!("total_duration: {}", total_duration);
                     println!("sequence: {}", sequence);
                     println!("m3u8_url_clone: {}", m3u8_url_clone);
                     tokio::spawn(async move {
                         println!("manage_cache");
-                        Self::manage_cache(&m3u8_url_clone, segments, sequence, cache_clone).await;
+                        Self::manage_cache(
+                            &m3u8_url_clone,
+                            segments,
+                            sequence,
+                            cache_clone,
+                            &cache_dir_clone,
+                        )
+                        .await;
                     });
                     let sleep_duration = Duration::from_secs(total_duration / 2);
                     println!("sleep_duration: {}", sleep_duration.as_secs());
@@ -88,8 +105,9 @@ impl TsCache {
         segments: Vec<(String, u64)>,
         sequence: u64,
         cache: Arc<Mutex<Vec<(String, u64)>>>,
+        cache_dir: &str,
     ) {
-        let mut cache_lock = cache.lock().await; // 使用 await 获取锁
+        let mut cache_lock = cache.lock().await;
 
         if !cache_lock.is_empty() {
             let last_seq = cache_lock.last().map(|(_, s)| *s).unwrap_or(0);
@@ -98,16 +116,14 @@ impl TsCache {
             }
         }
         for (segment, duration) in segments {
-            // 如果缓存已满，移除第一个元素
             if cache_lock.len() >= CACHE_SIZE {
-                // 使用 `if let` 解构 Option
                 let (old, _) = cache_lock.remove(0);
-                let old_path = format!("{}/{}", CACHE_DIR, old);
+                let old_path = format!("{}/{}", cache_dir, old);
                 let _ = fs::remove_file(&old_path);
             }
             let ts_url = Self::complete_ts_url(m3u8_url, &segment).unwrap();
             println!("ts_url: {}", ts_url);
-            if let Err(e) = Self::download_ts(&ts_url, &segment).await {
+            if let Err(e) = Self::download_ts(&ts_url, &segment, cache_dir).await {
                 eprintln!("Error downloading TS: {e}");
             } else {
                 cache_lock.push((segment.clone(), sequence));
@@ -115,10 +131,13 @@ impl TsCache {
         }
     }
 
-    async fn download_ts(ts_url: &str, segment: &str) -> Result<(), reqwest::Error> {
-        // 去除查询参数，只保留.ts文件名
+    async fn download_ts(
+        ts_url: &str,
+        segment: &str,
+        cache_dir: &str,
+    ) -> Result<(), reqwest::Error> {
         let clean_segment = segment.split('?').next().unwrap_or(segment);
-        let path = format!("{}/{}", CACHE_DIR, clean_segment);
+        let path = format!("{}/{}", cache_dir, clean_segment);
         println!("path: {}", path);
         if Path::new(&path).exists() {
             println!("{} already exists", path);

@@ -35,3 +35,4 @@ cpal = "0.15"                                                        # 音频播
 image = "0.24"
 shared_memory = "0.12.4"
 rand = "0.8"
+md5 = "0.7.0"
