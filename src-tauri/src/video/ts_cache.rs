@@ -48,7 +48,6 @@ impl TsCache {
                     // println!("m3u8_url_clone: {}", m3u8_url_clone);
                     println!("cache_clone: {:?}", cache_clone);
                     tokio::spawn(async move {
-                        println!("manage_cache");
                         Self::manage_cache(
                             &m3u8_url_clone,
                             segments,
@@ -109,30 +108,35 @@ impl TsCache {
         cache_dir: &str,
     ) {
         let mut cache_lock = cache.lock().await;
-
-        if !cache_lock.is_empty() {
-            let last_seq = cache_lock.last().map(|(_, s)| *s).unwrap_or(0);
-            if sequence <= last_seq {
-                return; // 避免重复下载
-            }
-        }
+        // println!("cache_lock len: {:?}", cache_lock.len());
+        let mut index = 0;
         for (segment, _duration) in segments {
+            let current_segment_sequence = sequence + index;
             if cache_lock.len() >= CACHE_SIZE {
                 let (old, _) = cache_lock.remove(0);
                 let old_path = format!("{}/{}", cache_dir, old);
-                println!("remove old_path: {}", old_path);
+                // println!("remove old_path: {}", old_path);
                 let _ = fs::remove_file(&old_path);
+            }
+            if !cache_lock.is_empty() {
+                let last_seq = cache_lock.last().map(|(_, s)| *s).unwrap_or(0);
+                // println!("last_seq: {}", last_seq);
+                if current_segment_sequence <= last_seq {
+                    index += 1;
+                    continue; // 避免重复下载
+                }
             }
             let clean_segment = &segment.split('?').next().unwrap_or(&segment);
             let ts_local_path = format!("{}/{}", cache_dir, clean_segment);
             // println!("path: {}", path);
             let ts_url = Self::complete_ts_url(m3u8_url, &segment).unwrap();
-            println!("ts_url: {}", ts_url);
+            // println!("ts_url: {}", ts_url);
             if let Err(e) = Self::download_ts(&ts_url, &ts_local_path).await {
                 eprintln!("Error downloading TS: {e}");
             } else {
-                cache_lock.push((clean_segment.to_string(), sequence));
+                cache_lock.push((clean_segment.to_string(), current_segment_sequence));
             }
+            index += 1;
         }
     }
 
@@ -146,7 +150,7 @@ impl TsCache {
         }
         let client = Client::new();
         let response = client.get(ts_url).send().await?.bytes().await?;
-        println!("response: {}", response.len());
+        // println!("response: {}", response.len());
         let mut file = File::create(ts_local_path).unwrap();
         file.write_all(&response).unwrap();
         Ok(())

@@ -90,10 +90,10 @@ impl VideoStreamer {
     pub fn start_stream(&self, url: String) {
         let app_handle = self.app_handle.clone();
         let ring_buffer = Arc::new(Mutex::new(RingBuffer::new(10)));
-        let cache = TsCache::new(url);
-        tokio::spawn(async move {
-            cache.run().await;
-        });
+        // let cache = TsCache::new(url);
+        // tokio::spawn(async move {
+        //     cache.run().await;
+        // });
         // ffmpeg_next::init().unwrap();
         // thread::spawn(move || {
         //     let mut ictx = format::input(&url).expect("无法打开 M3U8 流");
