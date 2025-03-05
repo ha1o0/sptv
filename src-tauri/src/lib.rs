@@ -2,6 +2,10 @@ mod db; // 声明 db 模块
 mod proxy; // 声明 proxy 模块
 mod video; // 声明 video 模块
 
+use std::sync::Arc;
+
+use video::ts_cache_manager::TsCacheManager;
+
 use crate::db::db::init_db;
 use crate::db::video_sources::{
     add_video_source_command, delete_video_source_command, get_video_sources_command,
@@ -10,6 +14,11 @@ use crate::db::video_sources::{
 use crate::db::video_urls::{add_video_urls_command, get_video_urls_command};
 use crate::video::{get_video_frame, start_video_stream, test_frame_data, test_frame_data2};
 
+#[derive(Clone)]
+struct AppState {
+    ts_cache_manager: Arc<TsCacheManager>,
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
     // 启动代理服务器（在单独的 Tokio 任务中）
@@ -17,12 +26,17 @@ pub async fn run() {
         proxy::start_proxy_server().await;
     });
 
+    let manager = Arc::new(TsCacheManager::new());
+
     // 初始化数据库连接池
     let pool = init_db().await.expect("Failed to initialize database");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(pool)
+        .manage(AppState {
+            ts_cache_manager: manager,
+        })
         .invoke_handler(tauri::generate_handler![
             add_video_source_command,
             get_video_sources_command,

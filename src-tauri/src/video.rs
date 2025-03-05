@@ -1,5 +1,6 @@
-mod ring_buffer;
-mod ts_cache;
+pub mod ring_buffer;
+pub mod ts_cache;
+pub mod ts_cache_manager;
 
 use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
@@ -16,12 +17,15 @@ use ffmpeg_next::{
 // use std::io::Write;
 use ring_buffer::{RingBuffer, VideoFrame};
 use shared_memory::*;
+use ts_cache_manager::TsCacheManager;
 use std::fmt::Debug;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Emitter};
 use ts_cache::TsCache;
+
+use crate::AppState;
 
 struct VideoStreamer {
     app_handle: AppHandle,
@@ -204,9 +208,13 @@ impl VideoStreamer {
 }
 
 #[tauri::command]
-pub fn start_video_stream(app: tauri::AppHandle, url: String) {
+pub async fn start_video_stream(state: tauri::State<'_, AppState>, app: tauri::AppHandle, url: String) -> Result<(), String> {
+    let url_clone = url.clone();
+    let cache_manager = state.ts_cache_manager.clone();
+    cache_manager.get_or_create_cache(url).await;
     let streamer = VideoStreamer::new(app);
-    streamer.start_stream(url);
+    streamer.start_stream(url_clone);
+    Ok(())
 }
 
 #[tauri::command]
