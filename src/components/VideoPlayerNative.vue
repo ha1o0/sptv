@@ -113,6 +113,24 @@ const initializePlayer = () => {
   updatePlaylist(props.src);
 };
 
+const test = async () => {
+  console.log(
+    "开始请求帧数据：",
+    new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  );
+  const frameData = await invoke("test_frame_data2", new Uint8Array([]), {
+    headers: {
+      url: currentSrc.value,
+    },
+  });
+  console.log(
+    "结束请求帧数据：",
+    new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  );
+  console.log("frameData: ", frameData);
+
+}
+
 // 更新视频源
 const updateVideoSource = async (newSrc) => {
   await invoke("start_video_stream", { url: newSrc });
@@ -150,13 +168,16 @@ onMounted(() => {
   initializePlayer();
   listen("video_frame", (event) => {
     console.log("video_frame: ", event.payload);
-    webGLYUV2RGBRenderer.renderFrame(
-      event.payload[0],
-      event.payload[1],
-      event.payload[2],
-      event.payload[3],
-      event.payload[4]
-    );
+    const fps = 25;
+    const interval = 1000 / fps;
+    setInterval(test, interval);
+    // webGLYUV2RGBRenderer.renderFrame(
+    //   event.payload[0],
+    //   event.payload[1],
+    //   event.payload[2],
+    //   event.payload[3],
+    //   event.payload[4]
+    // );
     // webglRenderer.renderFrame(event.payload[0], event.payload[1], event.payload[2]);
   });
 });

@@ -17,7 +17,6 @@ use ffmpeg_next::{
 // use std::io::Write;
 use ring_buffer::{RingBuffer, VideoFrame};
 use shared_memory::*;
-use ts_cache_manager::TsCacheManager;
 use std::fmt::Debug;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
@@ -89,11 +88,10 @@ impl VideoStreamer {
 
     pub fn start_stream(&self, url: String) {
         let app_handle = self.app_handle.clone();
-        let ring_buffer = Arc::new(Mutex::new(RingBuffer::new(10)));
-        // let cache = TsCache::new(url);
-        // tokio::spawn(async move {
-        //     cache.run().await;
-        // });
+        let ring_buffer = Arc::new(Mutex::new(RingBuffer::new(8)));
+        app_handle
+            .emit("video_frame", (0, 0, 0, 0, 0))
+            .expect("Failed to emit video frame");
         // ffmpeg_next::init().unwrap();
         // thread::spawn(move || {
         //     let mut ictx = format::input(&url).expect("无法打开 M3U8 流");
@@ -208,7 +206,11 @@ impl VideoStreamer {
 }
 
 #[tauri::command]
-pub async fn start_video_stream(state: tauri::State<'_, AppState>, app: tauri::AppHandle, url: String) -> Result<(), String> {
+pub async fn start_video_stream(
+    state: tauri::State<'_, AppState>,
+    app: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
     let url_clone = url.clone();
     let cache_manager = state.ts_cache_manager.clone();
     cache_manager.get_or_create_cache(url).await;
@@ -228,9 +230,15 @@ pub fn test_frame_data() -> Vec<u8> {
 }
 
 #[tauri::command]
-pub fn test_frame_data2(_request: tauri::ipc::Request<'_>) -> tauri::ipc::Response {
-    let arr = generate_vec(2_073_600);
-    tauri::ipc::Response::new(arr.clone())
+pub fn test_frame_data2(request: tauri::ipc::Request<'_>) -> tauri::ipc::Response {
+    if let tauri::ipc::InvokeBody::Raw(data) = request.body() {
+        let url = request.headers().get("url").unwrap().to_str().unwrap();
+        println!("url from request: {:?}", url);
+        let arr = generate_vec(2_073_600);
+        tauri::ipc::Response::new(arr.clone())
+    } else {
+        todo!()
+    }
 }
 
 pub fn generate_vec(size: i32) -> Vec<u8> {
