@@ -140,10 +140,7 @@ impl TsCache {
         }
     }
 
-    async fn download_ts(
-        ts_url: &str,
-        ts_local_path: &str
-    ) -> Result<(), reqwest::Error> {
+    async fn download_ts(ts_url: &str, ts_local_path: &str) -> Result<(), reqwest::Error> {
         if Path::new(ts_local_path).exists() {
             println!("{} already exists", ts_local_path);
             return Ok(());
@@ -163,5 +160,13 @@ impl TsCache {
             .or_else(|_| base_url.join(ts_path))
             .ok()?; // 处理相对路径
         Some(full_url.to_string())
+    }
+
+    /// 删除整个缓存目录
+    pub fn clear_cache() -> std::io::Result<()> {
+        if Path::new(CACHE_DIR).exists() {
+            fs::remove_dir_all(CACHE_DIR)?;
+        }
+        Ok(())
     }
 }

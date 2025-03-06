@@ -10,6 +10,10 @@ pub struct TsCacheManager {
 
 impl TsCacheManager {
     pub fn new() -> Self {
+        // 删除缓存目录
+        if let Err(e) = TsCache::clear_cache() {
+            eprintln!("Failed to clear cache: {}", e);
+        }
         Self {
             caches: Arc::new(Mutex::new(HashMap::new())),
         }
