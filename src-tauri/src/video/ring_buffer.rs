@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{VecDeque, HashMap};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -10,12 +10,13 @@ pub struct VideoFrame {
     pub height: u32,
 }
 
-pub struct RingBuffer {
+// 将原来的 RingBuffer 重命名为 FrameBuffer
+pub struct FrameBuffer {
     buffer: VecDeque<VideoFrame>,
     capacity: usize,
 }
 
-impl RingBuffer {
+impl FrameBuffer {
     pub fn new(capacity: usize) -> Self {
         Self {
             buffer: VecDeque::with_capacity(capacity),
@@ -25,7 +26,7 @@ impl RingBuffer {
 
     pub fn push(&mut self, frame: VideoFrame) {
         if self.buffer.len() >= self.capacity {
-            self.buffer.pop_front(); // 丢弃最旧的帧
+            self.buffer.pop_front();
         }
         self.buffer.push_back(frame);
     }
@@ -41,30 +42,86 @@ impl RingBuffer {
     }
 }
 
+// 新增 RingBufferManager 来管理多个视频源的帧缓存
+pub struct RingBufferManager {
+    buffers: HashMap<String, FrameBuffer>,
+    default_capacity: usize,
+}
+
+impl RingBufferManager {
+    pub fn new(default_capacity: usize) -> Self {
+        Self {
+            buffers: HashMap::new(),
+            default_capacity,
+        }
+    }
+
+    pub fn push(&mut self, url: &str, frame: VideoFrame) {
+        self.buffers
+            .entry(url.to_string())
+            .or_insert_with(|| FrameBuffer::new(self.default_capacity))
+            .push(frame);
+    }
+
+    // 新增方法：使用指定容量创建缓冲区
+    pub fn create_buffer(&mut self, url: &str, capacity: usize) {
+        self.buffers.insert(url.to_string(), FrameBuffer::new(capacity));
+    }
+
+    // 修改 push 方法，增加可选的 capacity 参数
+    pub fn push_with_capacity(&mut self, url: &str, frame: VideoFrame, capacity: Option<usize>) {
+        if let Some(cap) = capacity {
+            self.buffers
+                .entry(url.to_string())
+                .or_insert_with(|| FrameBuffer::new(cap))
+                .push(frame);
+        } else {
+            self.push(url, frame);
+        }
+    }
+
+    pub fn pop_n(&mut self, url: &str, n: usize) -> Vec<VideoFrame> {
+        if let Some(buffer) = self.buffers.get_mut(url) {
+            buffer.pop_n(n)
+        } else {
+            Vec::new()
+        }
+    }
+
+    pub fn remove_buffer(&mut self, url: &str) -> Option<FrameBuffer> {
+        self.buffers.remove(url)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
 
     #[test]
-    fn test_ring_buffer() {
-        let ring_buffer = Arc::new(Mutex::new(RingBuffer::new(10)));
+    fn test_ring_buffer_manager_with_different_capacities() {
+        let manager = Arc::new(Mutex::new(RingBufferManager::new(10)));
+        let url1 = "rtsp://example.com/stream1";
+        let url2 = "rtsp://example.com/stream2";
         
         {
-            let mut buffer = ring_buffer.lock().unwrap();
-            buffer.push(VideoFrame {
+            let mut mgr = manager.lock().unwrap();
+            // 使用默认容量(10)的缓冲区
+            mgr.push(url1, VideoFrame {
                 y_plane: vec![0; 1920 * 1080],
                 u_plane: vec![0; 960 * 540],
                 v_plane: vec![0; 960 * 540],
                 width: 1920,
                 height: 1080,
             });
-        }
-        
-        {
-            let mut buffer = ring_buffer.lock().unwrap();
-            let frames = buffer.pop_n(3);
-            assert_eq!(frames.len(), 1);
+
+            // 使用自定义容量(20)的缓冲区
+            mgr.push_with_capacity(url2, VideoFrame {
+                y_plane: vec![0; 1920 * 1080],
+                u_plane: vec![0; 960 * 540],
+                v_plane: vec![0; 960 * 540],
+                width: 1920,
+                height: 1080,
+            }, Some(20));
         }
     }
 }

@@ -170,7 +170,7 @@ onMounted(() => {
     console.log("video_frame: ", event.payload);
     const fps = 25;
     const interval = 1000 / fps;
-    setInterval(test, interval);
+    // setInterval(test, interval);
     // webGLYUV2RGBRenderer.renderFrame(
     //   event.payload[0],
     //   event.payload[1],

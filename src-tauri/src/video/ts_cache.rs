@@ -161,7 +161,16 @@ impl TsCache {
             .ok()?; // 处理相对路径
         Some(full_url.to_string())
     }
-
+    /// 从缓存队列头部获取一个 TS 文件地址
+    pub async fn get_next_ts(&self) -> Option<String> {
+        let cache = self.cache.lock().await;
+        if !cache.is_empty() {
+            let (ts_file, _) = &cache[0];
+            Some(format!("{}/{}", self.cache_dir, ts_file))
+        } else {
+            None
+        }
+    }
     /// 删除整个缓存目录
     pub fn clear_cache() -> std::io::Result<()> {
         if Path::new(CACHE_DIR).exists() {
