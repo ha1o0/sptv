@@ -2,6 +2,7 @@ pub mod ring_buffer;
 pub mod ts_cache;
 pub mod ts_cache_manager;
 
+use lazy_static::lazy_static;
 use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
 use ffmpeg_next::{self as ffmpeg, Rational};
@@ -12,6 +13,7 @@ use ffmpeg_next::{
     util::format::Pixel,
     Codec,
 };
+use ring_buffer::{RingBufferManager, VideoFrame};
 // use image::{ImageBuffer, RgbImage};
 // use std::fs::File;
 // use std::io::Write;
@@ -25,6 +27,10 @@ use tauri::{AppHandle, Emitter};
 use ts_cache::TsCache;
 
 use crate::AppState;
+
+lazy_static! {
+    static ref GLOBAL_RING_BUFFER: Arc<Mutex<RingBufferManager>> = Arc::new(Mutex::new(RingBufferManager::new(6)));
+}
 
 struct VideoStreamer {
     app_handle: AppHandle,
@@ -86,10 +92,16 @@ impl VideoStreamer {
         result
     }
 
-    pub fn decode_video_file(url: String) {
+    pub fn decode_video_file(file_url: String, url_id: String) {
         ffmpeg_next::init().unwrap();
+        // 使用全局 RingBufferManager
+        let ring_buffer = GLOBAL_RING_BUFFER.clone();
+        // 创建 RingBufferManager 实例，设置默认容量为 6 帧
+        // let ring_buffer = Arc::new(Mutex::new(RingBufferManager::new(6)));
+        // let ring_buffer_clone = ring_buffer.clone();
+
         thread::spawn(move || {
-            let mut ictx = format::input(&url).expect("无法打开视频流");
+            let mut ictx = format::input(&file_url).expect("无法打开视频流");
             let stream = ictx
                 .streams()
                 .best(ffmpeg_next::media::Type::Video)
@@ -170,20 +182,26 @@ impl VideoStreamer {
                         let u_data = yuv_frame.data(1).to_vec();
                         let v_data = yuv_frame.data(2).to_vec();
 
-                        // let y_size = (dst_width * dst_height) as usize;
-                        // let uv_size = y_size / 4;
-                        // assert_eq!(y_data.len(), y_size);
-                        // assert_eq!(u_data.len(), uv_size);
-                        // assert_eq!(v_data.len(), uv_size);
+                        // 创建 RingBufferFrame 并存入 buffer
+                        let video_frame = VideoFrame {
+                            y_plane: y_data,
+                            u_plane: u_data,
+                            v_plane: v_data,
+                            width: dst_width,
+                            height: dst_height,
+                        };
+
+                        // 使用全局 ring buffer
+                        if let Ok(mut manager) = ring_buffer.lock() {
+                            manager.push(&url_id, video_frame);
+                            let buffer_size = manager.get_buffer_size(&url_id);
+                            println!("buffer_size: {}", buffer_size);
+                        }
 
                         println!(
-                            "time: {}, y_data_len: {}, u_data_len: {}, v_data_len: {}, width: {}, height: {}",
+                            "time: {}, Frame pushed to ring buffer for url: {}",
                             chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                            y_data.len(),
-                            u_data.len(),
-                            v_data.len(),
-                            dst_width,
-                            dst_height,
+                            &file_url
                         );
                     }
                 }
@@ -207,7 +225,7 @@ impl VideoStreamer {
                     sleep(std::time::Duration::from_secs(10)).await;
                     continue;
                 }
-                Self::decode_video_file(ts_cache_url);
+                Self::decode_video_file(ts_cache_url, url.clone());
                 current_decode_url = ts_cache_url_clone;
             } else {
                 sleep(std::time::Duration::from_secs(1)).await;

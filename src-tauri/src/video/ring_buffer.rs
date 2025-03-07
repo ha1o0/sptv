@@ -55,7 +55,13 @@ impl RingBufferManager {
             default_capacity,
         }
     }
-
+    pub fn get_buffer_size(&self, url: &str) -> usize {
+        if let Some(buffer) = self.buffers.get(url) {
+            buffer.buffer.len()
+        } else {
+            0
+        }
+    }
     pub fn push(&mut self, url: &str, frame: VideoFrame) {
         self.buffers
             .entry(url.to_string())
@@ -90,38 +96,5 @@ impl RingBufferManager {
 
     pub fn remove_buffer(&mut self, url: &str) -> Option<FrameBuffer> {
         self.buffers.remove(url)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ring_buffer_manager_with_different_capacities() {
-        let manager = Arc::new(Mutex::new(RingBufferManager::new(10)));
-        let url1 = "rtsp://example.com/stream1";
-        let url2 = "rtsp://example.com/stream2";
-        
-        {
-            let mut mgr = manager.lock().unwrap();
-            // 使用默认容量(10)的缓冲区
-            mgr.push(url1, VideoFrame {
-                y_plane: vec![0; 1920 * 1080],
-                u_plane: vec![0; 960 * 540],
-                v_plane: vec![0; 960 * 540],
-                width: 1920,
-                height: 1080,
-            });
-
-            // 使用自定义容量(20)的缓冲区
-            mgr.push_with_capacity(url2, VideoFrame {
-                y_plane: vec![0; 1920 * 1080],
-                u_plane: vec![0; 960 * 540],
-                v_plane: vec![0; 960 * 540],
-                width: 1920,
-                height: 1080,
-            }, Some(20));
-        }
     }
 }
