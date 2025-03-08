@@ -132,6 +132,12 @@ const test = async () => {
   const frameData = new Uint8Array(response);
 
   console.log("frameData: ", frameData);
+  
+  if (frameData.length === 0) {
+    console.log("没有帧数据");
+    return;
+  }
+
   // 需要根据帧的尺寸来分割 Y、U、V 平面
   const width = 1920;  // 与 Rust 端 dst_width 一致
   const height = 1080; // 与 Rust 端 dst_height 一致
@@ -189,7 +195,7 @@ onMounted(() => {
   console.log('current url: ', currentSrc.value)
   listen("video_frame", (event) => {
     console.log("video_frame: ", event.payload);
-    const fps = 25;
+    const fps = 10;
     const interval = 1000 / fps;
     setInterval(test, interval);
     // webGLYUV2RGBRenderer.renderFrame(
