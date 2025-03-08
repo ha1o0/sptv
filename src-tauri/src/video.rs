@@ -95,7 +95,7 @@ impl VideoStreamer {
     pub fn decode_video_file(file_url: String, url_id: String, ts_cache: Arc<TsCache>) {
         ffmpeg_next::init().unwrap();
         // 使用全局 RingBufferManager
-        let ring_buffer = GLOBAL_RING_BUFFER.clone();
+        // let ring_buffer = GLOBAL_RING_BUFFER.clone();
         // 创建 RingBufferManager 实例，设置默认容量为 6 帧
         // let ring_buffer = Arc::new(Mutex::new(RingBufferManager::new(6)));
         // let ring_buffer_clone = ring_buffer.clone();
@@ -149,7 +149,7 @@ impl VideoStreamer {
                 );
             }
 
-            let dst_width = 640;
+            let dst_width = 1920;
             let dst_height =
                 ((dst_width as f32 * decoder_height as f32 / decoder_width as f32) as u32 + 1) & !1;
 
@@ -187,17 +187,18 @@ impl VideoStreamer {
                         };
                         // 循环检查直到buffer有空间
                         loop {
-                            if let Ok(mut manager) = ring_buffer.lock() {
+                            if let Ok(mut manager) = GLOBAL_RING_BUFFER.lock() {
                                 let buffer_size = manager.get_buffer_size(&url_id);
                                 if buffer_size < 6 {  // 6是RingBufferManager初始化时设置的容量
+                                    // println!("video_frame - y_plane len: {}, u_plane len: {}, v_plane len: {}", video_frame.y_plane.len(), video_frame.u_plane.len(), video_frame.v_plane.len());
                                     manager.push(&url_id, video_frame);
-                                    println!("buffer_size: {}", buffer_size);
+                                    println!("buffer_size: {}, {}", buffer_size, &url_id);
                                     break;
                                 }
                                 // 如果buffer满了，释放锁并等待一段时间再重试
                                 drop(manager);
-                                println!("Buffer已满，等待空间...");
-                                std::thread::sleep(std::time::Duration::from_millis(10));
+                                // println!("Buffer已满，等待空间...");
+                                std::thread::sleep(std::time::Duration::from_millis(1000));
                             }
                         }
                     }
@@ -217,6 +218,7 @@ impl VideoStreamer {
     }
 
     pub async fn start_stream(&self, url: String, ts_cache: Arc<TsCache>) {
+        println!("start_stream url: {:?}", url);
         let app_handle = self.app_handle.clone();
         app_handle
             .emit("video_frame", (0, 0, 0, 0, 0))
@@ -357,11 +359,10 @@ pub async fn start_video_stream(
     app: tauri::AppHandle,
     url: String,
 ) -> Result<(), String> {
-    let url_clone = url.clone();
     let cache_manager = state.ts_cache_manager.clone();
-    let url_ts_cache = cache_manager.get_or_create_cache(url).await;
+    let url_ts_cache = cache_manager.get_or_create_cache(url.clone()).await;
     let streamer = VideoStreamer::new(app);
-    streamer.start_stream(url_clone, url_ts_cache).await;
+    streamer.start_stream(url, url_ts_cache).await;
     Ok(())
 }
 
@@ -377,13 +378,32 @@ pub fn test_frame_data() -> Vec<u8> {
 
 #[tauri::command]
 pub fn test_frame_data2(request: tauri::ipc::Request<'_>) -> tauri::ipc::Response {
-    if let tauri::ipc::InvokeBody::Raw(data) = request.body() {
+    if let tauri::ipc::InvokeBody::Raw(_data) = request.body() {
         let url = request.headers().get("url").unwrap().to_str().unwrap();
         println!("url from request: {:?}", url);
-        let arr = generate_vec(2_073_600);
-        tauri::ipc::Response::new(arr.clone())
+        // 获取全局 ring buffer 的锁
+        if let Ok(mut manager) = GLOBAL_RING_BUFFER.lock() {
+            // 从 ring buffer 中获取第一帧数据
+            if let Some(frame) = manager.pop_n(url, 1).first() {
+                println!("frame y size: {:?}", frame.y_plane.len());
+                println!("frame u size: {:?}", frame.u_plane.len());
+
+                // 将 YUV 数据平面合并成一个向量
+                let mut frame_data = Vec::new();
+                frame_data.extend_from_slice(&frame.y_plane);
+                frame_data.extend_from_slice(&frame.u_plane);
+                frame_data.extend_from_slice(&frame.v_plane);
+                
+                return tauri::ipc::Response::new(frame_data);
+            }
+            println!("没有数据0");
+            return tauri::ipc::Response::new(vec![]);
+        }
+        println!("没有数据1");
+        tauri::ipc::Response::new(vec![])
     } else {
-        todo!()
+        println!("没有数据2");
+        tauri::ipc::Response::new(vec![])
     }
 }
 

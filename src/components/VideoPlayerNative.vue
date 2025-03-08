@@ -118,7 +118,7 @@ const test = async () => {
     "开始请求帧数据：",
     new Date().toLocaleString() + "." + new Date().getMilliseconds()
   );
-  const frameData = await invoke("test_frame_data2", new Uint8Array([]), {
+  const response = await invoke("test_frame_data2", new Uint8Array([]), {
     headers: {
       url: currentSrc.value,
     },
@@ -127,15 +127,35 @@ const test = async () => {
     "结束请求帧数据：",
     new Date().toLocaleString() + "." + new Date().getMilliseconds()
   );
-  console.log("frameData: ", frameData);
+  console.log("response: ", response);
 
+  const frameData = new Uint8Array(response);
+
+  console.log("frameData: ", frameData);
+  // 需要根据帧的尺寸来分割 Y、U、V 平面
+  const width = 1920;  // 与 Rust 端 dst_width 一致
+  const height = 1080; // 与 Rust 端 dst_height 一致
+
+  // 计算各平面的大小
+  const ySize = width * height;
+  const uvSize = (width * height) / 4;
+
+  // 分离 YUV 平面
+  const yPlane = frameData.slice(0, ySize);
+  const uPlane = frameData.slice(ySize, ySize + uvSize);
+  const vPlane = frameData.slice(ySize + uvSize, ySize + uvSize * 2);
+
+  // console.log("yPlane: ", yPlane);
+  // console.log("uPlane: ", uPlane);
+  // console.log("vPlane: ", vPlane);
+  webGLYUV2RGBRenderer.renderFrame(yPlane, uPlane, vPlane, width, height);
 }
 
 // 更新视频源
 const updateVideoSource = async (newSrc) => {
-  await invoke("start_video_stream", { url: newSrc });
   console.log("update src: ", newSrc);
   updatePlaylist(newSrc);
+  await invoke("start_video_stream", { url: newSrc });
 };
 
 const updatePlaylist = (newSrc) => {
@@ -166,11 +186,12 @@ watch(
 // 组件挂载时初始化播放器
 onMounted(() => {
   initializePlayer();
+  console.log('current url: ', currentSrc.value)
   listen("video_frame", (event) => {
     console.log("video_frame: ", event.payload);
     const fps = 25;
     const interval = 1000 / fps;
-    // setInterval(test, interval);
+    setInterval(test, interval);
     // webGLYUV2RGBRenderer.renderFrame(
     //   event.payload[0],
     //   event.payload[1],
