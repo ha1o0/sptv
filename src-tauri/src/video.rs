@@ -92,14 +92,13 @@ impl VideoStreamer {
         result
     }
 
-    pub fn decode_video_file(file_url: String, url_id: String) {
+    pub fn decode_video_file(file_url: String, url_id: String, ts_cache: Arc<TsCache>) {
         ffmpeg_next::init().unwrap();
         // 使用全局 RingBufferManager
         let ring_buffer = GLOBAL_RING_BUFFER.clone();
         // 创建 RingBufferManager 实例，设置默认容量为 6 帧
         // let ring_buffer = Arc::new(Mutex::new(RingBufferManager::new(6)));
         // let ring_buffer_clone = ring_buffer.clone();
-
         thread::spawn(move || {
             let mut ictx = format::input(&file_url).expect("无法打开视频流");
             let stream = ictx
@@ -174,15 +173,11 @@ impl VideoStreamer {
                         eprintln!("Failed to send packet: {}", e);
                         continue;
                     }
-
                     while decoder.receive_frame(&mut frame).is_ok() {
                         scaler.run(&frame, &mut yuv_frame).unwrap();
-
                         let y_data = yuv_frame.data(0).to_vec();
                         let u_data = yuv_frame.data(1).to_vec();
                         let v_data = yuv_frame.data(2).to_vec();
-
-                        // 创建 RingBufferFrame 并存入 buffer
                         let video_frame = VideoFrame {
                             y_plane: y_data,
                             u_plane: u_data,
@@ -190,24 +185,35 @@ impl VideoStreamer {
                             width: dst_width,
                             height: dst_height,
                         };
-
-                        // 使用全局 ring buffer
-                        if let Ok(mut manager) = ring_buffer.lock() {
-                            manager.push(&url_id, video_frame);
-                            let buffer_size = manager.get_buffer_size(&url_id);
-                            println!("buffer_size: {}", buffer_size);
+                        // 循环检查直到buffer有空间
+                        loop {
+                            if let Ok(mut manager) = ring_buffer.lock() {
+                                let buffer_size = manager.get_buffer_size(&url_id);
+                                if buffer_size < 6 {  // 6是RingBufferManager初始化时设置的容量
+                                    manager.push(&url_id, video_frame);
+                                    println!("buffer_size: {}", buffer_size);
+                                    break;
+                                }
+                                // 如果buffer满了，释放锁并等待一段时间再重试
+                                drop(manager);
+                                println!("Buffer已满，等待空间...");
+                                std::thread::sleep(std::time::Duration::from_millis(10));
+                            }
                         }
-
-                        println!(
-                            "time: {}, Frame pushed to ring buffer for url: {}",
-                            chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
-                            &file_url
-                        );
                     }
+                    // println!(
+                    //     "time: {}, Frame pushed to ring buffer for url: {}",
+                    //     chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                    //     &file_url
+                    // );
                 }
             }
             println!("解码完成");
+            // 解码完成后，将ts_cache中当前直播流的第一个ts文件从ts_cache中移除
+            ts_cache.remove_first_ts();
         });
+
+        println!("解码线程已启动");
     }
 
     pub async fn start_stream(&self, url: String, ts_cache: Arc<TsCache>) {
@@ -217,18 +223,19 @@ impl VideoStreamer {
             .expect("Failed to emit video frame");
         let mut current_decode_url = url.clone();
         loop {
-            let ts_cache_url = ts_cache.get_next_ts().await;
+            let (ts_cache_url, _sequence, duration) = ts_cache.get_next_ts().await;
             println!("ts_cache_url: {:?}", ts_cache_url);
-            if let Some(ts_cache_url) = ts_cache_url {
+            if ts_cache_url != "" {
                 let ts_cache_url_clone = ts_cache_url.clone();
                 if ts_cache_url == current_decode_url {
                     sleep(std::time::Duration::from_secs(10)).await;
                     continue;
                 }
-                Self::decode_video_file(ts_cache_url, url.clone());
+                Self::decode_video_file(ts_cache_url, url.clone(), ts_cache.clone());
                 current_decode_url = ts_cache_url_clone;
             } else {
-                sleep(std::time::Duration::from_secs(1)).await;
+                // todo 这里需要处理一下间隔时间
+                sleep(std::time::Duration::from_secs(duration)).await;
             }
         }
         // ffmpeg_next::init().unwrap();

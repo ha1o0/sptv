@@ -14,7 +14,7 @@ use md5;
 
 pub struct TsCache {
     client: Client,
-    cache: Arc<Mutex<Vec<(String, u64)>>>,
+    cache: Arc<Mutex<Vec<(String, u64, u64)>>>,
     m3u8_url: String,
     cache_dir: String, // 添加缓存目录字段
 }
@@ -104,22 +104,23 @@ impl TsCache {
         m3u8_url: &str,
         segments: Vec<(String, u64)>,
         sequence: u64,
-        cache: Arc<Mutex<Vec<(String, u64)>>>,
+        cache: Arc<Mutex<Vec<(String, u64, u64)>>>,
         cache_dir: &str,
     ) {
         let mut cache_lock = cache.lock().await;
         // println!("cache_lock len: {:?}", cache_lock.len());
         let mut index = 0;
-        for (segment, _duration) in segments {
+        for (segment, duration) in segments {
             let current_segment_sequence = sequence + index;
+            // todo 这段其实可以删掉，因为删除了也不会影响到缓存队列的长度，因为删除会在解码后执行。
             if cache_lock.len() >= CACHE_SIZE {
-                let (old, _) = cache_lock.remove(0);
+                let (old, _, _) = cache_lock.remove(0);
                 let old_path = format!("{}/{}", cache_dir, old);
                 // println!("remove old_path: {}", old_path);
                 let _ = fs::remove_file(&old_path);
             }
             if !cache_lock.is_empty() {
-                let last_seq = cache_lock.last().map(|(_, s)| *s).unwrap_or(0);
+                let last_seq = cache_lock.last().map(|(_, s, _)| *s).unwrap_or(0);
                 // println!("last_seq: {}", last_seq);
                 if current_segment_sequence <= last_seq {
                     index += 1;
@@ -134,7 +135,7 @@ impl TsCache {
             if let Err(e) = Self::download_ts(&ts_url, &ts_local_path).await {
                 eprintln!("Error downloading TS: {e}");
             } else {
-                cache_lock.push((clean_segment.to_string(), current_segment_sequence));
+                cache_lock.push((clean_segment.to_string(), current_segment_sequence, duration));
             }
             index += 1;
         }
@@ -162,13 +163,13 @@ impl TsCache {
         Some(full_url.to_string())
     }
     /// 从缓存队列头部获取一个 TS 文件地址
-    pub async fn get_next_ts(&self) -> Option<String> {
+    pub async fn get_next_ts(&self) -> (String, u64, u64) {
         let cache = self.cache.lock().await;
         if !cache.is_empty() {
-            let (ts_file, _) = &cache[0];
-            Some(format!("{}/{}", self.cache_dir, ts_file))
+            let (ts_file, sequence, duration) = &cache[0];
+            (format!("{}/{}", self.cache_dir, ts_file), * sequence, * duration)
         } else {
-            None
+            ("".to_string(), 0, 0)
         }
     }
     /// 删除整个缓存目录
@@ -177,5 +178,22 @@ impl TsCache {
             fs::remove_dir_all(CACHE_DIR)?;
         }
         Ok(())
+    }
+    /// 删除缓存队列中的第一个TS文件及其对应的缓存文件
+    pub async fn remove_first_ts(&self) -> Result<(), std::io::Error> {
+        let mut cache = self.cache.lock().await;
+        if let Some((ts_file, _, _)) = cache.first().cloned() {
+            // 删除缓存数组中的第一个元素
+            cache.remove(0);
+            
+            // 删除对应的文件
+            let file_path = format!("{}/{}", self.cache_dir, ts_file);
+            if Path::new(&file_path).exists() {
+                fs::remove_file(file_path)?;
+            }
+            Ok(())
+        } else {
+            Ok(()) // 如果缓存为空，直接返回成功
+        }
     }
 }
