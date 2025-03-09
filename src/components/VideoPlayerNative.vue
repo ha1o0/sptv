@@ -88,6 +88,8 @@ const currentChannelName = ref(""); // 当前播放的节目名称
 const isPlaylistVisible = ref(true); // 控制播放列表的展开和收起
 const playlistWidth = ref("230px"); // 播放列表的宽度
 const showNavbar = ref(true); // 是否显示播放器顶部导航栏
+const lastRenderTime = ref(0);
+const renderInterval = ref(16);
 
 const videoCanvas = ref(null);
 let webglRenderer = null; // WebGLRenderer 实例
@@ -113,7 +115,16 @@ const initializePlayer = () => {
   updatePlaylist(props.src);
 };
 
-const test = async () => {
+const renderFn = () => {
+  const now = new Date()
+  const timestamp = now.getTime();
+  if (timestamp - lastRenderTime.value >= renderInterval.value) {
+    lastRenderTime.value = timestamp;
+    test(timestamp);
+  }
+}
+
+const test = async (timestamp) => {
   console.log(
     "开始请求帧数据：",
     new Date().toLocaleString() + "." + new Date().getMilliseconds()
@@ -132,7 +143,7 @@ const test = async () => {
   const frameData = new Uint8Array(response);
 
   console.log("frameData: ", frameData);
-  
+
   if (frameData.length === 0) {
     console.log("没有帧数据");
     return;
@@ -195,9 +206,10 @@ onMounted(() => {
   console.log('current url: ', currentSrc.value)
   listen("video_frame", (event) => {
     console.log("video_frame: ", event.payload);
-    const fps = 10;
+    const fps = 25;
     const interval = 1000 / fps;
-    setInterval(test, interval);
+    renderInterval.value = interval;
+    setInterval(test, renderInterval.value);
     // webGLYUV2RGBRenderer.renderFrame(
     //   event.payload[0],
     //   event.payload[1],

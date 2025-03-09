@@ -113,12 +113,12 @@ impl TsCache {
         for (segment, duration) in segments {
             let current_segment_sequence = sequence + index;
             // todo 这段其实可以删掉，因为删除了也不会影响到缓存队列的长度，因为删除会在解码后执行。
-            if cache_lock.len() >= CACHE_SIZE {
-                let (old, _, _) = cache_lock.remove(0);
-                let old_path = format!("{}/{}", cache_dir, old);
-                // println!("remove old_path: {}", old_path);
-                let _ = fs::remove_file(&old_path);
-            }
+            // if cache_lock.len() >= CACHE_SIZE {
+            //     let (old, _, _) = cache_lock.remove(0);
+            //     let old_path = format!("{}/{}", cache_dir, old);
+            //     // println!("remove old_path: {}", old_path);
+            //     let _ = fs::remove_file(&old_path);
+            // }
             if !cache_lock.is_empty() {
                 let last_seq = cache_lock.last().map(|(_, s, _)| *s).unwrap_or(0);
                 // println!("last_seq: {}", last_seq);
@@ -182,17 +182,20 @@ impl TsCache {
     /// 删除缓存队列中的第一个TS文件及其对应的缓存文件
     pub async fn remove_first_ts(&self) -> Result<(), std::io::Error> {
         let mut cache = self.cache.lock().await;
+        println!("will remove cache: {:?}", cache);
         if let Some((ts_file, _, _)) = cache.first().cloned() {
             // 删除缓存数组中的第一个元素
             cache.remove(0);
-            
+            println!("remove ts_file: {}", ts_file);
             // 删除对应的文件
             let file_path = format!("{}/{}", self.cache_dir, ts_file);
+            println!("remove file_path: {}", file_path);
             if Path::new(&file_path).exists() {
                 fs::remove_file(file_path)?;
             }
             Ok(())
         } else {
+            println!("cache is empty");
             Ok(()) // 如果缓存为空，直接返回成功
         }
     }

@@ -29,7 +29,7 @@ use ts_cache::TsCache;
 use crate::AppState;
 
 lazy_static! {
-    static ref GLOBAL_RING_BUFFER: Arc<Mutex<RingBufferManager>> = Arc::new(Mutex::new(RingBufferManager::new(6)));
+    static ref GLOBAL_RING_BUFFER: Arc<Mutex<RingBufferManager>> = Arc::new(Mutex::new(RingBufferManager::new(20)));
 }
 
 struct VideoStreamer {
@@ -92,14 +92,9 @@ impl VideoStreamer {
         result
     }
 
-    pub fn decode_video_file(file_url: String, url_id: String, ts_cache: Arc<TsCache>) {
-        ffmpeg_next::init().unwrap();
-        // 使用全局 RingBufferManager
-        // let ring_buffer = GLOBAL_RING_BUFFER.clone();
-        // 创建 RingBufferManager 实例，设置默认容量为 6 帧
-        // let ring_buffer = Arc::new(Mutex::new(RingBufferManager::new(6)));
-        // let ring_buffer_clone = ring_buffer.clone();
-        thread::spawn(move || {
+    pub async fn decode_video_file(file_url: String, url_id: String, ts_cache: Arc<TsCache>) {
+        let handle = thread::spawn(move || {
+            println!("解码线程已启动");
             let mut ictx = format::input(&file_url).expect("无法打开视频流");
             let stream = ictx
                 .streams()
@@ -189,7 +184,7 @@ impl VideoStreamer {
                         loop {
                             if let Ok(mut manager) = GLOBAL_RING_BUFFER.lock() {
                                 let buffer_size = manager.get_buffer_size(&url_id);
-                                if buffer_size < 6 {  // 6是RingBufferManager初始化时设置的容量
+                                if buffer_size < 20 {  // RingBufferManager初始化时设置的容量
                                     // println!("video_frame - y_plane len: {}, u_plane len: {}, v_plane len: {}", video_frame.y_plane.len(), video_frame.u_plane.len(), video_frame.v_plane.len());
                                     manager.push(&url_id, video_frame);
                                     println!("buffer_size: {}, {}", buffer_size, &url_id);
@@ -197,8 +192,8 @@ impl VideoStreamer {
                                 }
                                 // 如果buffer满了，释放锁并等待一段时间再重试
                                 drop(manager);
-                                // println!("Buffer已满，等待空间...");
-                                std::thread::sleep(std::time::Duration::from_millis(1000));
+                                println!("Buffer已满，等待空间...");
+                                std::thread::sleep(std::time::Duration::from_millis(10));
                             }
                         }
                     }
@@ -209,16 +204,17 @@ impl VideoStreamer {
                     // );
                 }
             }
-            println!("解码完成");
-            // 解码完成后，将ts_cache中当前直播流的第一个ts文件从ts_cache中移除
-            ts_cache.remove_first_ts();
         });
-
-        println!("解码线程已启动");
+        handle.join().unwrap(); // 等待子线程完成
+        println!("解码完成");
+        // 解码完成后，将ts_cache中当前直播流的第一个ts文件从ts_cache中移除
+        let _ = ts_cache.remove_first_ts().await;
+        
     }
 
     pub async fn start_stream(&self, url: String, ts_cache: Arc<TsCache>) {
         println!("start_stream url: {:?}", url);
+        ffmpeg_next::init().unwrap();
         let app_handle = self.app_handle.clone();
         app_handle
             .emit("video_frame", (0, 0, 0, 0, 0))
@@ -230,14 +226,14 @@ impl VideoStreamer {
             if ts_cache_url != "" {
                 let ts_cache_url_clone = ts_cache_url.clone();
                 if ts_cache_url == current_decode_url {
-                    sleep(std::time::Duration::from_secs(10)).await;
+                    sleep(std::time::Duration::from_secs(duration - 1)).await;
                     continue;
                 }
-                Self::decode_video_file(ts_cache_url, url.clone(), ts_cache.clone());
+                Self::decode_video_file(ts_cache_url, url.clone(), ts_cache.clone()).await;
                 current_decode_url = ts_cache_url_clone;
             } else {
                 // todo 这里需要处理一下间隔时间
-                sleep(std::time::Duration::from_secs(duration)).await;
+                sleep(std::time::Duration::from_secs(1)).await;
             }
         }
         // ffmpeg_next::init().unwrap();
