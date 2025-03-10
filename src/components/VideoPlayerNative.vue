@@ -89,7 +89,10 @@ const isPlaylistVisible = ref(true); // 控制播放列表的展开和收起
 const playlistWidth = ref("230px"); // 播放列表的宽度
 const showNavbar = ref(true); // 是否显示播放器顶部导航栏
 const lastRenderTime = ref(0);
-const renderInterval = ref(16);
+const renderInterval = ref(40);
+const frameList = ref([]);
+const videoWidth = ref(1920);
+const videoHeight = ref(1080);
 
 const videoCanvas = ref(null);
 let webglRenderer = null; // WebGLRenderer 实例
@@ -115,34 +118,39 @@ const initializePlayer = () => {
   updatePlaylist(props.src);
 };
 
-const renderFn = () => {
-  const now = new Date()
-  const timestamp = now.getTime();
+const renderFn = (timestamp) => {
   if (timestamp - lastRenderTime.value >= renderInterval.value) {
     lastRenderTime.value = timestamp;
-    test(timestamp);
+    if (frameList.value.length) {
+      const frame = frameList.value.shift();
+      webGLYUV2RGBRenderer.renderFrame(frame[0], frame[1], frame[2], videoWidth.value, videoHeight.value);
+      lastRenderTime.value = timestamp;
+    } else {
+      console.log("没有帧数据, 空等");
+    }
   }
+  requestAnimationFrame(renderFn);
 }
 
 const test = async (timestamp) => {
-  console.log(
-    "开始请求帧数据：",
-    new Date().toLocaleString() + "." + new Date().getMilliseconds()
-  );
+  // console.log(
+  //   "开始请求帧数据：",
+  //   new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  // );
   const response = await invoke("test_frame_data2", new Uint8Array([]), {
     headers: {
       url: currentSrc.value,
     },
   });
-  console.log(
-    "结束请求帧数据：",
-    new Date().toLocaleString() + "." + new Date().getMilliseconds()
-  );
-  console.log("response: ", response);
+  // console.log(
+  //   "结束请求帧数据：",
+  //   new Date().toLocaleString() + "." + new Date().getMilliseconds()
+  // );
+  // console.log("response: ", response);
 
   const frameData = new Uint8Array(response);
 
-  console.log("frameData: ", frameData);
+  // console.log("frameData: ", frameData);
 
   if (frameData.length === 0) {
     console.log("没有帧数据");
@@ -154,8 +162,8 @@ const test = async (timestamp) => {
   const height = 1080; // 与 Rust 端 dst_height 一致
 
   // 计算各平面的大小
-  const ySize = width * height;
-  const uvSize = (width * height) / 4;
+  const ySize = videoWidth.value * videoHeight.value;
+  const uvSize = (videoWidth.value * videoHeight.value) / 4;
 
   // 分离 YUV 平面
   const yPlane = frameData.slice(0, ySize);
@@ -165,7 +173,7 @@ const test = async (timestamp) => {
   // console.log("yPlane: ", yPlane);
   // console.log("uPlane: ", uPlane);
   // console.log("vPlane: ", vPlane);
-  webGLYUV2RGBRenderer.renderFrame(yPlane, uPlane, vPlane, width, height);
+  frameList.value.push([yPlane, uPlane, vPlane]);
 }
 
 // 更新视频源
@@ -209,7 +217,8 @@ onMounted(() => {
     const fps = 25;
     const interval = 1000 / fps;
     renderInterval.value = interval;
-    setInterval(test, renderInterval.value);
+    setInterval(test, 20);
+    requestAnimationFrame(renderFn);
     // webGLYUV2RGBRenderer.renderFrame(
     //   event.payload[0],
     //   event.payload[1],

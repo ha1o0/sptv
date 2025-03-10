@@ -2,7 +2,6 @@ pub mod ring_buffer;
 pub mod ts_cache;
 pub mod ts_cache_manager;
 
-use lazy_static::lazy_static;
 use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
 use ffmpeg_next::{self as ffmpeg, Rational};
@@ -13,23 +12,25 @@ use ffmpeg_next::{
     util::format::Pixel,
     Codec,
 };
+use lazy_static::lazy_static;
 use ring_buffer::{RingBufferManager, VideoFrame};
 // use image::{ImageBuffer, RgbImage};
 // use std::fs::File;
 // use std::io::Write;
 use shared_memory::*;
-use tokio::time::sleep;
 use std::fmt::Debug;
 use std::io::Error;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Emitter};
+use tokio::time::sleep;
 use ts_cache::TsCache;
 
 use crate::AppState;
 
 lazy_static! {
-    static ref GLOBAL_RING_BUFFER: Arc<Mutex<RingBufferManager>> = Arc::new(Mutex::new(RingBufferManager::new(20)));
+    static ref GLOBAL_RING_BUFFER: Arc<Mutex<RingBufferManager>> =
+        Arc::new(Mutex::new(RingBufferManager::new(20)));
 }
 
 struct VideoStreamer {
@@ -184,16 +185,17 @@ impl VideoStreamer {
                         loop {
                             if let Ok(mut manager) = GLOBAL_RING_BUFFER.lock() {
                                 let buffer_size = manager.get_buffer_size(&url_id);
-                                if buffer_size < 20 {  // RingBufferManager初始化时设置的容量
+                                if buffer_size < 20 {
+                                    // RingBufferManager初始化时设置的容量
                                     // println!("video_frame - y_plane len: {}, u_plane len: {}, v_plane len: {}", video_frame.y_plane.len(), video_frame.u_plane.len(), video_frame.v_plane.len());
                                     manager.push(&url_id, video_frame);
                                     println!("buffer_size: {}, {}", buffer_size, &url_id);
                                     break;
                                 }
                                 // 如果buffer满了，释放锁并等待一段时间再重试
-                                drop(manager);
-                                println!("Buffer已满，等待空间...");
-                                std::thread::sleep(std::time::Duration::from_millis(10));
+                                // drop(manager);
+                                // println!("Buffer已满，等待空间...");
+                                // std::thread::sleep(std::time::Duration::from_millis(10));
                             }
                         }
                     }
@@ -209,7 +211,6 @@ impl VideoStreamer {
         println!("解码完成");
         // 解码完成后，将ts_cache中当前直播流的第一个ts文件从ts_cache中移除
         let _ = ts_cache.remove_first_ts().await;
-        
     }
 
     pub async fn start_stream(&self, url: String, ts_cache: Arc<TsCache>) {
@@ -389,7 +390,7 @@ pub fn test_frame_data2(request: tauri::ipc::Request<'_>) -> tauri::ipc::Respons
                 frame_data.extend_from_slice(&frame.y_plane);
                 frame_data.extend_from_slice(&frame.u_plane);
                 frame_data.extend_from_slice(&frame.v_plane);
-                
+
                 return tauri::ipc::Response::new(frame_data);
             }
             println!("没有数据0");

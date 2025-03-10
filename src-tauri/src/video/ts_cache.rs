@@ -135,7 +135,11 @@ impl TsCache {
             if let Err(e) = Self::download_ts(&ts_url, &ts_local_path).await {
                 eprintln!("Error downloading TS: {e}");
             } else {
-                cache_lock.push((clean_segment.to_string(), current_segment_sequence, duration));
+                cache_lock.push((
+                    clean_segment.to_string(),
+                    current_segment_sequence,
+                    duration,
+                ));
             }
             index += 1;
         }
@@ -167,7 +171,11 @@ impl TsCache {
         let cache = self.cache.lock().await;
         if !cache.is_empty() {
             let (ts_file, sequence, duration) = &cache[0];
-            (format!("{}/{}", self.cache_dir, ts_file), * sequence, * duration)
+            (
+                format!("{}/{}", self.cache_dir, ts_file),
+                *sequence,
+                *duration,
+            )
         } else {
             ("".to_string(), 0, 0)
         }

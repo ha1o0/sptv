@@ -1,4 +1,4 @@
-use std::collections::{VecDeque, HashMap};
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
@@ -71,7 +71,8 @@ impl RingBufferManager {
 
     // 新增方法：使用指定容量创建缓冲区
     pub fn create_buffer(&mut self, url: &str, capacity: usize) {
-        self.buffers.insert(url.to_string(), FrameBuffer::new(capacity));
+        self.buffers
+            .insert(url.to_string(), FrameBuffer::new(capacity));
     }
 
     // 修改 push 方法，增加可选的 capacity 参数
