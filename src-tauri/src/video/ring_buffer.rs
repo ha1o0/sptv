@@ -89,7 +89,7 @@ impl RingBufferManager {
 
     pub fn pop_n(&mut self, url: &str, n: usize) -> Vec<VideoFrame> {
         if let Some(buffer) = self.buffers.get_mut(url) {
-            println!("pop_n: {:?}", buffer.buffer.len());
+            // println!("pop_n: {:?}", buffer.buffer.len());
             buffer.pop_n(n)
         } else {
             println!("buffer emptyyyyyy");

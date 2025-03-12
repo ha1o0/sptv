@@ -57,7 +57,7 @@ impl TsCache {
                         )
                         .await;
                     });
-                    let sleep_duration = Duration::from_secs(total_duration / 2);
+                    let sleep_duration = Duration::from_secs(1);
                     println!("sleep_duration: {}", sleep_duration.as_secs());
                     sleep(sleep_duration).await;
                 }
@@ -206,5 +206,10 @@ impl TsCache {
             println!("cache is empty");
             Ok(()) // 如果缓存为空，直接返回成功
         }
+    }
+    // 在 TsCache 实现中添加这个方法
+    pub async fn get_cache_size(&self) -> usize {
+        let cache = self.cache.lock().await;
+        cache.len()
     }
 }

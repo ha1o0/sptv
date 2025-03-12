@@ -132,7 +132,7 @@ const renderFn = (timestamp) => {
   requestAnimationFrame(renderFn);
 }
 
-const test = async (timestamp) => {
+const fetchFrameData = async (timestamp) => {
   // console.log(
   //   "开始请求帧数据：",
   //   new Date().toLocaleString() + "." + new Date().getMilliseconds()
@@ -216,9 +216,11 @@ onMounted(() => {
     console.log("video_frame: ", event.payload);
     const fps = 25;
     const interval = 1000 / fps;
-    renderInterval.value = interval;
-    setInterval(test, 20);
-    requestAnimationFrame(renderFn);
+    renderInterval.value = 30;
+    setInterval(fetchFrameData, 5);
+    setTimeout(() => {
+      requestAnimationFrame(renderFn);
+    }, 2000);
     // webGLYUV2RGBRenderer.renderFrame(
     //   event.payload[0],
     //   event.payload[1],
