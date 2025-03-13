@@ -104,7 +104,8 @@ impl VideoStreamer {
             let stream_index = stream.index();
             let fps = stream.avg_frame_rate();
             let frame_rate = fps.numerator() / fps.denominator();
-            println!("帧率: {}", frame_rate);
+            let time_base = stream.time_base();
+            println!("帧率: {}, time base: {}", frame_rate, time_base);
 
             let decoder_width = 1920;
             let decoder_height = 1080;
@@ -181,6 +182,8 @@ impl VideoStreamer {
                             width: dst_width,
                             height: dst_height,
                         };
+                        let pts = frame.pts();
+                        // println!("pts: {:?}", pts);
                         // 循环检查直到buffer有空间
                         loop {
                             if let Ok(mut manager) = GLOBAL_RING_BUFFER.lock() {
