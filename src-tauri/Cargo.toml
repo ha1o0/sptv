@@ -16,7 +16,6 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
-# ffmpeg-sys-next = { version = "7.1.0", features = ["build", "static"] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
@@ -29,10 +28,10 @@ tokio = { version = "1", features = ["full"] }
 chrono = "0.4"
 sqlx = { version = "0.8.1", features = ["sqlite", "runtime-tokio"] }
 url = "2.5.4"
-ffmpeg-next = "7.1.0"                                                # FFmpeg 绑定
-wgpu = "24.0.1"                                                      # WGPU 渲染
+ffmpeg-next = "7.1.0"
+wgpu = "24.0.1"
 winit = { version = "0.29", features = ["rwh_05"] }
-cpal = "0.15"                                                        # 音频播放
+cpal = "0.15"
 image = "0.24"
 shared_memory = "0.12.4"
 rand = "0.8"
