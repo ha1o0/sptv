@@ -4,47 +4,41 @@ class WebSocketClient {
   private socket: WebSocket | null = null;
   private clientId: string | null = null;
   private messageHandlers: Map<string, Function[]> = new Map();
+  private binaryType: 'blob' | 'arraybuffer' = 'arraybuffer';  // 直接使用 arraybuffer
 
-  // 连接到 WebSocket 服务器
   async connect(): Promise<void> {
     try {
-      // 从后端获取 WebSocket 端口
       const port = await invoke<number>('get_ws_port');
       const wsUrl = `ws://localhost:${port}/ws`;
 
       return new Promise((resolve, reject) => {
         this.socket = new WebSocket(wsUrl);
+        // 设置为直接接收 ArrayBuffer
+        this.socket.binaryType = this.binaryType;
 
         this.socket.onopen = () => {
           console.log('WebSocket 连接已建立');
           resolve();
         };
 
-        this.socket.onmessage = async (event) => {
+        this.socket.onmessage = (event) => {
           try {
-            if (event.data instanceof Blob) {
+            if (event.data instanceof ArrayBuffer) {
                 console.log("收到二进制数据, 时间", new Date().toLocaleString() + "." + new Date().getMilliseconds());
-                // 处理二进制数据
-                const arrayBuffer = await event.data.arrayBuffer();
-                const uint8Array = new Uint8Array(arrayBuffer);
-                console.log('收到二进制数据，长度:', uint8Array.length, 'time: ', new Date().toLocaleString() + "." + new Date().getMilliseconds());
+                // 直接使用 ArrayBuffer，避免 Blob 转换
+                const uint8Array = new Uint8Array(event.data);
                 // 这里可以对二进制数据进行处理
-                // this.handleMessage({ TestData: { data: Array.from(uint8Array) } });
+                this.handleBinaryMessage(uint8Array);
             } else {
-                // 处理其他文本消息
                 const message = JSON.parse(event.data);
-                console.log('收到消息:', message);
-
                 if (message.ClientConnected) {
                     this.clientId = message.ClientConnected.client_id;
-                    console.log('客户端 ID:', this.clientId);
                 }
-
                 this.handleMessage(message);
             }
-        } catch (error) {
+          } catch (error) {
             console.error('处理消息失败:', error);
-        }
+          }
         };
 
         this.socket.onerror = (error) => {
@@ -60,6 +54,14 @@ class WebSocketClient {
     } catch (error) {
       console.error('连接 WebSocket 失败:', error);
       throw error;
+    }
+  }
+
+  // 新增二进制数据处理方法
+  private handleBinaryMessage(data: Uint8Array): void {
+    if (this.messageHandlers.has('binary')) {
+      const handlers = this.messageHandlers.get('binary') || [];
+      handlers.forEach(handler => handler(data));
     }
   }
 
