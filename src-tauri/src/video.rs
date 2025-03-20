@@ -1,6 +1,8 @@
+mod frame_ws;
 pub mod ring_buffer;
 pub mod ts_cache;
 pub mod ts_cache_manager;
+mod winit_window;
 
 use ffmpeg::codec::context::Context as CodecContext;
 use ffmpeg_next::decoder::Video;
@@ -182,7 +184,7 @@ impl VideoStreamer {
                             width: dst_width,
                             height: dst_height,
                         };
-                        let pts = frame.pts();
+                        // let pts = frame.pts();
                         // println!("pts: {:?}", pts);
                         // 循环检查直到buffer有空间
                         loop {
@@ -218,29 +220,11 @@ impl VideoStreamer {
 
     pub async fn start_stream(&self, url: String) {
         println!("start_stream url: {:?}", url);
-        ffmpeg_next::init().unwrap();
         let app_handle = self.app_handle.clone();
         app_handle
             .emit("video_frame", (0, 0, 0, 0, 0))
             .expect("Failed to emit video frame");
         Self::decode_video_file("".to_owned(), url).await;
-        // let mut current_decode_url = url.clone();
-        // loop {
-        //     let (ts_cache_url, _sequence, duration) = ts_cache.get_next_ts().await;
-        //     println!("ts_cache_url: {:?}", ts_cache_url);
-        //     if ts_cache_url != "" {
-        //         let ts_cache_url_clone = ts_cache_url.clone();
-        //         if ts_cache_url == current_decode_url {
-        //             sleep(std::time::Duration::from_secs(duration - 1)).await;
-        //             continue;
-        //         }
-        //         Self::decode_video_file(ts_cache_url, url.clone(), ts_cache.clone()).await;
-        //         current_decode_url = ts_cache_url_clone;
-        //     } else {
-        //         // todo 这里需要处理一下间隔时间
-        //         sleep(std::time::Duration::from_secs(1)).await;
-        //     }
-        // }
         // ffmpeg_next::init().unwrap();
         // thread::spawn(move || {
         //     let mut ictx = format::input(&url).expect("无法打开 M3U8 流");
